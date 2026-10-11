@@ -10,5 +10,6 @@ dist
 .vercel
 tsconfig.tsbuildinfo
 
-.env*
 .idea
+.claude/
+.data/

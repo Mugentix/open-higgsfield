@@ -3,8 +3,10 @@
 import { useRef } from "react";
 import type { CSSProperties } from "react";
 
+import { COMPARE_MAX, COMPARE_MIN, canCompare } from "./compare";
+import type { Judged, Verdict } from "./data";
 import type { RunRecord } from "./history";
-import { CloseIcon, DownloadIcon, HeartIcon, PlayBadgeIcon, TrashIcon } from "./icons";
+import { CloseIcon, CompareIcon, DownloadIcon, HeartIcon, PlayBadgeIcon, TrashIcon } from "./icons";
 
 /** How many runs the count stack shows before it stops drawing new sheets. */
 const STACK = 3;
@@ -24,15 +26,20 @@ export interface SaveProgress {
 export function SelectionBar({
   records,
   saving,
+  onCompare,
   onDownload,
   onFavorite,
+  onVerdict,
   onDelete,
   onClose,
 }: {
-  records: RunRecord[];
+  records: Array<RunRecord & Judged>;
   saving: SaveProgress | null;
+  onCompare: () => void;
   onDownload: () => void;
   onFavorite: () => void;
+  /** The team's call on the whole selection; null takes it back. */
+  onVerdict: (verdict: Verdict | null) => void;
   onDelete: () => void;
   onClose: () => void;
 }) {
@@ -45,19 +52,35 @@ export function SelectionBar({
   const count = shown.length;
   const saveable = shown.filter((record) => record.urls[0]).length;
   const allKept = shown.every((record) => record.favorite === true);
+  const allWinners = shown.every((record) => record.verdict === "winner");
+  const allKilled = shown.every((record) => record.verdict === "killed");
   const noun = count === 1 ? "run" : "runs";
+  /* A set already called is released by the same press, as the heart releases
+     a kept set — which is what a pressed control has to mean. */
+  const winnerLabel = allWinners
+    ? `Take back winner on ${count} ${noun}`
+    : `Mark ${count} ${noun} ${count === 1 ? "a winner" : "winners"}`;
+  const killLabel = allKilled ? `Take back killed on ${count} ${noun}` : `Kill ${count} ${noun}`;
 
+  /* Several files travel as one archive; the tip says so, since "Download"
+     on its own promises the files themselves. */
   const downloadLabel = saving
     ? `Saving ${saving.done} of ${saving.total}`
     : saveable === 0
       ? "Nothing here to download"
       : saveable < count
-        ? `Download ${saveable} of ${count}`
-        : "Download";
+        ? `Download ${saveable} of ${count}${saveable > 1 ? " as one zip" : ""}`
+        : saveable > 1
+          ? `Download ${count} as one zip`
+          : "Download";
+  const comparable = canCompare(count);
+  const compareLabel = comparable
+    ? "Compare side by side"
+    : `Pick ${COMPARE_MIN} to ${COMPARE_MAX} runs to compare`;
 
   return (
     /* A labelled group rather than role="toolbar": the toolbar pattern promises
-       arrow-key navigation between its controls, and four buttons the visitor
+       arrow-key navigation between its controls, and five buttons the visitor
        can already tab through do not need a second set of keys to learn. */
     <div
       className="ohf-selbar"
@@ -103,6 +126,21 @@ export function SelectionBar({
 
       <span className="ohf-selbar-rule" aria-hidden />
 
+      {/* Reads the picked runs against each other; the number of columns the
+          dialog can hold is its own to say. */}
+      <span className="ohf-selbar-slot ohf-tip" data-tip={compareLabel}>
+        <button
+          type="button"
+          className="ohf-selact ohf-selact--wide"
+          disabled={!comparable}
+          aria-label={compareLabel}
+          onClick={onCompare}
+        >
+          <CompareIcon size={15} />
+          <span className="ohf-selact-label">Compare</span>
+        </button>
+      </span>
+
       <span className="ohf-selbar-slot ohf-tip" data-tip={downloadLabel}>
         <button
           type="button"
@@ -117,6 +155,34 @@ export function SelectionBar({
           </span>
         </button>
       </span>
+
+      {/* The team's call in bulk — the two ends of it, which is what a set is
+          marked as together; Testing is called one run at a time, from the
+          card or the viewer. Words, not glyphs: there is no picture for
+          "winner" that reads faster than the word. */}
+      <button
+        type="button"
+        className="ohf-selact ohf-selact--word ohf-tip"
+        data-tip={winnerLabel}
+        data-on={allWinners}
+        aria-pressed={allWinners}
+        aria-label={winnerLabel}
+        onClick={() => onVerdict(allWinners ? null : "winner")}
+      >
+        <span className="ohf-selact-label">Winner</span>
+      </button>
+
+      <button
+        type="button"
+        className="ohf-selact ohf-selact--word ohf-selact--kill ohf-tip"
+        data-tip={killLabel}
+        data-on={allKilled}
+        aria-pressed={allKilled}
+        aria-label={killLabel}
+        onClick={() => onVerdict(allKilled ? null : "killed")}
+      >
+        <span className="ohf-selact-label">Kill</span>
+      </button>
 
       <button
         type="button"

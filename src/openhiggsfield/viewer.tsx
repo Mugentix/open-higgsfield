@@ -2,20 +2,28 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { settingLabel, settingValueLabel } from "./data";
-import { fileNameFor, saveFile } from "./download";
-import { timeAgo, type RunRecord } from "./history";
-import { ModelIcon } from "./model-icon";
+import type { UseTarget } from "@/generation/attach";
+import type { MediaRole } from "@/generation/catalog";
+
 import {
-  CheckIcon,
-  CloseIcon,
-  CopyIcon,
-  DownloadIcon,
-  HeartIcon,
-  OpenOutIcon,
-  RetryIcon,
-  TrashIcon,
-} from "./icons";
+  hasPlane,
+  NOTE_LIMIT,
+  settingLabel,
+  settingValueLabel,
+  TILE_TOOLS,
+  tileTool,
+  type Judged,
+  type Verdict,
+  VERDICT_KEYS,
+  VERDICT_LABELS,
+  verdictOfKey,
+  VERDICTS,
+} from "./data";
+import { saveFile } from "./download";
+import { timeAgo, type RunRecord } from "./history";
+import { typingIn } from "./hotkeys";
+import { ModelIcon } from "./model-icon";
+import { CheckIcon, CloseIcon, CopyIcon, DownloadIcon, GemIcon, HeartIcon, OpenOutIcon, PlusIcon, RetryIcon, ShuffleIcon, TrashIcon } from "./icons";
 
 /* Backstop only: the exit normally ends on the panel's own animationend. A
    backgrounded tab can defer that event indefinitely, and a dialog that never
@@ -24,6 +32,9 @@ const EXIT_TIMEOUT_MS = 420;
 /* Long enough to be read as a receipt, short enough that the button is back
    under the cursor before the visitor reaches for it again. */
 const COPIED_MS = 1600;
+/* The note's count appears only once the cap is in sight; a tally over an
+   empty field would read as a limit before there is anything to limit. */
+const NOTE_COUNT_FROM = NOTE_LIMIT - 100;
 
 /* The relative time in the header answers "when"; this answers "which run",
    so it is written out in full and never abbreviated. */
@@ -45,14 +56,33 @@ export function Viewer({
   onReuse,
   onFavorite,
   onDelete,
+  onVerdict,
+  onNote,
   onPrev,
   onNext,
+  targets,
+  onUse,
+  onVariants,
+  onUtility,
+  downloadName,
 }: {
-  item: RunRecord;
+  item: RunRecord & Judged;
+  /** What the file is saved as. Named by the app, which knows the product and
+      project the run belongs to; the dialog only knows the run. */
+  downloadName: string;
   onClose: () => void;
   onReuse: () => void;
   onFavorite: () => void;
   onDelete: () => void;
+  /** The team's call on this run, and the words behind it; null clears each. */
+  onVerdict: (verdict: Verdict | null) => void;
+  onNote: (note: string | null) => void;
+  /** What this run can be used as next, given the model in the composer. */
+  targets: UseTarget[];
+  onUse: (role: MediaRole) => void;
+  onVariants: () => void;
+  /** A promptless utility run on this result, by catalog id. */
+  onUtility: (modelId: string) => void;
   /* Absent at the ends of the scope, which is how the walk stops. */
   onPrev?: () => void;
   onNext?: () => void;
@@ -65,11 +95,37 @@ export function Viewer({
      cannot swap the action out from under it. */
   const after = useRef(onClose);
 
+  /* Opened off a tile's own button, and the exit hands focus back there —
+     unless something else took it first, as Recreate does with the prompt.
+     The opener is read once into a ref: React runs this effect twice in
+     development, and a second read would find the dialog's own panel. */
+  const opener = useRef<HTMLElement | null>(null);
   useEffect(() => {
+    opener.current ??= document.activeElement instanceof HTMLElement ? document.activeElement : null;
     ref.current?.showModal();
     // Focus the panel itself so no action button opens pre-ringed.
     panelRef.current?.focus();
+    return () => {
+      if (document.activeElement === null || document.activeElement === document.body) opener.current?.focus();
+    };
   }, []);
+
+  /* The note as typed, or null while the field shows the saved words
+     unchanged — so a teammate's edit arriving through the feed is shown, not
+     fought. It is handed over when the field is left, and only when it
+     differs from what is saved: a refused save leaves the words in the field
+     for the next try rather than emptying it. A dialog that unmounts never
+     fires blur, so every way out, and every step to the next run, flushes it
+     first. */
+  const [draft, setDraft] = useState<string | null>(null);
+  const noteRef = useRef({ draft, saved: item.note ?? "" });
+  noteRef.current = { draft, saved: item.note ?? "" };
+  const flushNote = useCallback(() => {
+    const { draft, saved } = noteRef.current;
+    if (draft === null) return;
+    const next = draft.trim();
+    if (next !== saved) onNote(next || null);
+  }, [onNote]);
 
   /* Every way out plays the same exit. The dialog stays mounted and open
      while it runs — calling close(), or letting the parent drop it, would cut
@@ -77,10 +133,11 @@ export function Viewer({
   const leave = useCallback(
     (action: () => void) => {
       if (closing) return;
+      flushNote();
       after.current = action;
       setClosing(true);
     },
-    [closing],
+    [closing, flushNote],
   );
 
   useEffect(() => {
@@ -130,7 +187,9 @@ export function Viewer({
     setShown(item.id);
     setDelivered(null);
     setCopied(false);
+    setDraft(null);
   }
+  const note = draft ?? item.note ?? "";
   const aspect = delivered ?? w / h;
   const url = item.urls[0];
 
@@ -171,12 +230,48 @@ export function Viewer({
          dialog stays open and the media is swapped underneath it. */
       onKeyDown={(event) => {
         /* A focused player spends the arrows on seeking, which is what they
-           mean once someone is scrubbing a clip. */
-        if (event.target instanceof HTMLVideoElement) return;
+           mean once someone is scrubbing a clip; in the note the letters are
+           words, and the arrows move the caret. */
+        if (event.target instanceof HTMLVideoElement || typingIn(event.target)) return;
+        /* A held key repeats; a verdict key would flip the call once per
+           repeat, and the arrows would hand the note over mid-step. */
+        if (event.repeat) return;
+        const key = event.key.toLowerCase();
+        const plain = !event.metaKey && !event.ctrlKey && !event.altKey;
+        /* W, T and X: the same letters the grid answers to. A call is not a
+           dismissal — the dialog stays, the button lights — and the press
+           stops here so the grid cannot make it a second time underneath. */
+        const verdict = plain && url ? verdictOfKey(key) : undefined;
+        if (verdict) {
+          event.preventDefault();
+          event.stopPropagation();
+          onVerdict(item.verdict === verdict ? null : verdict);
+          return;
+        }
+        const role: MediaRole | null = key === "r" ? "reference" : key === "s" ? "start" : key === "e" ? "end" : key === "v" ? "video" : null;
+        if (role && plain && targets.some((t) => t.role === role)) {
+          event.preventDefault();
+          event.stopPropagation();
+          leave(() => onUse(role));
+          return;
+        }
+        /* U and B, the same letters the grid answers to: the tool leaves
+           through the dialog's exit and lands beside this run. The press stops
+           here so the grid's listener cannot run it a second time. */
+        const tool = plain && url ? tileTool(item.kind, key) : undefined;
+        if (tool) {
+          event.preventDefault();
+          event.stopPropagation();
+          leave(() => onUtility(tool.modelId));
+          return;
+        }
         if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
         const step = event.key === "ArrowLeft" ? onPrev : onNext;
         if (!step || closing) return;
         event.preventDefault();
+        /* The note belongs to the run on screen; it is handed over before
+           the next one takes its place. */
+        flushNote();
         step();
       }}
     >
@@ -233,7 +328,7 @@ export function Viewer({
           </figure>
         </div>
 
-        <aside className="ohf-viewer-side">
+        <aside className="ohf-viewer-side" aria-label="Run details">
           <header className="ohf-viewer-side-head">
             <div className="ohf-viewer-title">
               <h2 className="ohf-viewer-model">
@@ -269,6 +364,59 @@ export function Viewer({
               <p className="ohf-viewer-prompt">{item.prompt}</p>
             </section>
 
+            {/* The team's call and the words behind it, on a run that has a
+                file to judge. Toggle buttons rather than a menu: three words
+                are the whole vocabulary, and the one that holds is state, so
+                it stands lit. */}
+            {url && (
+              <section className="ohf-viewer-block">
+                <h3 className="ohf-viewer-label">Verdict</h3>
+                <div className="ohf-viewer-verdicts" role="group" aria-label="Verdict">
+                  {VERDICTS.map((verdict) => {
+                    const on = item.verdict === verdict;
+                    return (
+                      <button
+                        key={verdict}
+                        type="button"
+                        className="ohf-btn-solid ohf-viewer-verdict"
+                        data-verdict={verdict}
+                        data-on={on}
+                        aria-pressed={on}
+                        title={`${VERDICT_LABELS[verdict]} · ${VERDICT_KEYS[verdict].toUpperCase()}`}
+                        onClick={() => onVerdict(on ? null : verdict)}
+                      >
+                        {VERDICT_LABELS[verdict]}
+                        <span className="ohf-viewer-use-hint">{VERDICT_KEYS[verdict].toUpperCase()}</span>
+                      </button>
+                    );
+                  })}
+                  {item.verdict && (
+                    <button
+                      type="button"
+                      className="ohf-btn-solid ohf-viewer-verdict ohf-viewer-verdict--clear"
+                      onClick={() => onVerdict(null)}
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                <textarea
+                  className="ohf-input ohf-input--area ohf-viewer-note"
+                  aria-label="Note"
+                  placeholder="Why it won, what to test next — kept when you leave the field"
+                  maxLength={NOTE_LIMIT}
+                  value={note}
+                  onChange={(event) => setDraft(event.target.value)}
+                  onBlur={flushNote}
+                />
+                {note.length >= NOTE_COUNT_FROM && (
+                  <span className="ohf-viewer-note-count" aria-hidden>
+                    {note.length} / {NOTE_LIMIT}
+                  </span>
+                )}
+              </section>
+            )}
+
             <section className="ohf-viewer-block">
               <h3 className="ohf-viewer-label">Details</h3>
               <dl className="ohf-viewer-facts">
@@ -293,14 +441,16 @@ export function Viewer({
           <footer className="ohf-viewer-side-foot">
             {/* Recreate is the loop the studio is built on: it loads this run's
                 model, dials and words back into the composer. */}
-            <button
-              type="button"
-              className="ohf-cta ohf-viewer-recreate"
-              onClick={() => leave(onReuse)}
-            >
-              <RetryIcon />
-              Recreate
-            </button>
+            {hasPlane(item) && (
+              <button
+                type="button"
+                className="ohf-cta ohf-viewer-recreate"
+                onClick={() => leave(onReuse)}
+              >
+                <RetryIcon />
+                Recreate
+              </button>
+            )}
             {/* Names the refusal and the way past it: the same press, now
                 falling through to the anchor's own navigation, hands the file
                 to a tab the browser can save from. */}
@@ -309,13 +459,53 @@ export function Viewer({
                 The platform’s CDN refused the read. Open the file to save it from the browser.
               </p>
             )}
+            {/* The loop, at full size: this run becomes the next one's input
+                with one press, and the model that takes it is named when the
+                composer's cannot. Variants re-submit the very same plane. */}
+            {url && (targets.length > 0 || TILE_TOOLS[item.kind].length > 0) && (
+              <div className="ohf-viewer-use" role="group" aria-label="Use this run">
+                {targets.map((target) => (
+                  <button
+                    key={target.role}
+                    type="button"
+                    className="ohf-btn-solid"
+                    title={target.modelLabel ? `Switches to ${target.modelLabel}` : undefined}
+                    onClick={() => leave(() => onUse(target.role))}
+                  >
+                    <PlusIcon size={13} />
+                    {target.label}
+                    {target.modelLabel && <span className="ohf-viewer-use-hint">{target.modelLabel}</span>}
+                  </button>
+                ))}
+                {hasPlane(item) && (
+                  <button type="button" className="ohf-btn-solid" title="Four more from the same plane" onClick={() => leave(onVariants)}>
+                    <ShuffleIcon size={13} />
+                    Variants ×4
+                  </button>
+                )}
+                {/* Tools work on this result as it is, with the entry's
+                    defaults, and land beside it. */}
+                {TILE_TOOLS[item.kind].map((tool) => (
+                  <button
+                    key={tool.modelId}
+                    type="button"
+                    className="ohf-btn-solid"
+                    title={`${tool.label} · ${tool.key.toUpperCase()}`}
+                    onClick={() => leave(() => onUtility(tool.modelId))}
+                  >
+                    <GemIcon size={13} />
+                    {tool.label}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="ohf-viewer-foot-row">
               {url && (
                 <a
                   className="ohf-btn-solid ohf-viewer-download"
                   data-state={saveState ?? undefined}
                   href={url}
-                  download
+                  download={downloadName}
                   target={saveState === "failed" ? "_blank" : undefined}
                   rel="noreferrer"
                   title={
@@ -330,7 +520,7 @@ export function Viewer({
                     event.preventDefault();
                     if (saveState === "saving") return;
                     setSave({ id: item.id, state: "saving" });
-                    void saveFile(url, fileNameFor(item, 0)).then((ok) =>
+                    void saveFile(url, downloadName).then((ok) =>
                       setSave(ok ? null : { id: item.id, state: "failed" }),
                     );
                   }}

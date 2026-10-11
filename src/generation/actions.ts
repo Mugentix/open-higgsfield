@@ -1,85 +1,127 @@
 "use server";
 
-import { cookies } from "next/headers";
-
-import { getModel, parseSettings } from "./catalog";
-import type { GenerationPlane } from "./catalog/types";
-import {
-  MissingCredentialsError,
-  PLATFORM_KEY_COOKIE,
-  PLATFORM_KEY_COOKIE_OPTIONS,
-  decodeCredentials,
-  encodeCredentials,
-  parseCredentialInput,
-} from "./credentials";
+import { parseCredentialInput } from "./credentials";
+import { parsePlane } from "./parse-plane";
 import { createPlatformClient } from "./platform";
-import type { StatusResult } from "./platform";
-import { toPlatform } from "./to-platform";
+import { keySource, readCredentials, type KeySource } from "./server/credentials-store";
+import type { CreatedRun, RunView } from "./views";
+import { db, schema } from "@/server/db/client";
+import { kickJobs } from "@/server/jobs/runner";
+import { guarded, type ActionResult } from "@/server/result";
+import { createRun, syncRuns } from "@/server/runs";
+import { last4, seal } from "@/server/secrets";
+import { canManage, requireTeam } from "@/server/team";
 
-export async function savePlatformCredentials(data: unknown) {
-  const { apiKey } = parseCredentialInput(data);
-  const jar = await cookies();
-  jar.set(PLATFORM_KEY_COOKIE, encodeCredentials(apiKey), PLATFORM_KEY_COOKIE_OPTIONS);
+export type KeyStatus = {
+  source: KeySource;
+  last4: string | null;
+  canManage: boolean;
+};
+
+/** Where the team's KIE key comes from and whether this member may change it. */
+export async function getKeyStatus(): Promise<ActionResult<KeyStatus>> {
+  return guarded(async () => {
+    const team = await requireTeam();
+    const source = await keySource(team.teamId);
+    const row =
+      source === "team"
+        ? await db.query.teamSettings.findFirst({
+            where: (t, { eq }) => eq(t.teamId, team.teamId),
+            columns: { kieKeyLast4: true },
+          })
+        : null;
+    return { source, last4: row?.kieKeyLast4 ?? null, canManage: canManage(team.role) };
+  });
 }
 
-export async function clearPlatformCredentials() {
-  const jar = await cookies();
-  jar.set(PLATFORM_KEY_COOKIE, "", { ...PLATFORM_KEY_COOKIE_OPTIONS, maxAge: 0 });
+/** Owners and admins set the team's key. It is proved against KIE's credit
+    endpoint before it is sealed and kept. */
+export async function saveTeamKey(data: unknown): Promise<ActionResult<KeyStatus>> {
+  return guarded(async () => {
+    const team = await requireTeam({ role: ["owner", "admin"] });
+    const { apiKey } = parseCredentialInput(data);
+    await createPlatformClient({ apiKey }).credits();
+    await db
+      .insert(schema.teamSettings)
+      .values({ teamId: team.teamId, kieApiKeyEnc: seal(apiKey), kieKeyLast4: last4(apiKey), updatedBy: team.userId })
+      .onConflictDoUpdate({
+        target: schema.teamSettings.teamId,
+        set: { kieApiKeyEnc: seal(apiKey), kieKeyLast4: last4(apiKey), updatedBy: team.userId, updatedAt: new Date() },
+      });
+    return { source: "team" as const, last4: last4(apiKey), canManage: true };
+  });
 }
 
-export async function hasPlatformCredentials() {
-  return (await readStoredCredentials()) !== null;
+export async function clearTeamKey(): Promise<ActionResult<KeyStatus>> {
+  return guarded(async () => {
+    const team = await requireTeam({ role: ["owner", "admin"] });
+    await db
+      .insert(schema.teamSettings)
+      .values({ teamId: team.teamId, kieApiKeyEnc: null, kieKeyLast4: null, updatedBy: team.userId })
+      .onConflictDoUpdate({
+        target: schema.teamSettings.teamId,
+        set: { kieApiKeyEnc: null, kieKeyLast4: null, updatedBy: team.userId, updatedAt: new Date() },
+      });
+    return { source: await keySource(team.teamId), last4: null, canManage: true };
+  });
 }
 
-export async function submitGeneration(plane: GenerationPlane) {
-  const model = getModel(plane.model);
-  const parsed: GenerationPlane = {
-    ...plane,
-    settings: parseSettings(model, plane.settings),
-  };
-  const { path, body } = toPlatform(parsed);
-  return createPlatformClient(await readCredentials()).submit(path, body);
+/** Remaining credits on the account the team's key belongs to. */
+export async function getCredits(): Promise<ActionResult<number | null>> {
+  return guarded(async () => {
+    const team = await requireTeam();
+    try {
+      return await createPlatformClient(await readCredentials(team)).credits();
+    } catch {
+      return null;
+    }
+  });
 }
 
-/** Every request in flight, answered in one round trip. Next dispatches server
+/** One press, one run: recorded, then handed to KIE. The idempotency key is
+    the press's own, so a retried call never pays twice. */
+export async function submitGeneration(data: unknown): Promise<ActionResult<CreatedRun>> {
+  return guarded(async () => {
+    const team = await requireTeam();
+    const record = asObject(data, "Invalid generation");
+    const plane = parsePlane(record.plane);
+    const idempotencyKey = typeof record.idempotencyKey === "string" && record.idempotencyKey ? record.idempotencyKey : null;
+    if (!idempotencyKey || idempotencyKey.length > 80) throw new Error("Invalid generation");
+    const created = await createRun(team, {
+      plane,
+      idempotencyKey,
+      ...(typeof record.projectId === "string" ? { projectId: record.projectId } : {}),
+      ...(typeof record.batchId === "string" ? { batchId: record.batchId } : {}),
+      ...(typeof record.parentResultId === "string" ? { parentResultId: record.parentResultId } : {}),
+    });
+    kickJobs();
+    return created;
+  });
+}
+
+/** Every run in flight, answered in one round trip. Next dispatches server
     actions one at a time per client, so a poll per run would queue ahead of the
-    next submit — the fan-out belongs on this side of the call, where it is
-    genuinely parallel. */
-export async function getGenerationStatuses(data: unknown): Promise<StatusResult[]> {
-  const requestIds = parseRequestIds(data);
-  const client = createPlatformClient(await readCredentials());
-  return Promise.all(
-    requestIds.map(async (requestId): Promise<StatusResult> => {
-      try {
-        return { requestId, status: await client.status(requestId) };
-      } catch (caught) {
-        return { requestId, error: caught instanceof Error ? caught.message : String(caught) };
-      }
-    }),
-  );
-}
-
-async function readStoredCredentials() {
-  const jar = await cookies();
-  return decodeCredentials(jar.get(PLATFORM_KEY_COOKIE)?.value);
-}
-
-async function readCredentials() {
-  const stored = await readStoredCredentials();
-  if (!stored) throw new MissingCredentialsError();
-  const baseUrl = process.env.HF_API_BASE_URL;
-  if (!baseUrl) throw new Error("Missing HF_API_BASE_URL");
-  return { ...stored, baseUrl };
+    next submit — the fan-out belongs on this side of the call. The rows are
+    read first; only runs due a look ask KIE. */
+export async function getGenerationStatuses(data: unknown): Promise<ActionResult<RunView[]>> {
+  return guarded(async () => {
+    const team = await requireTeam();
+    const views = await syncRuns(team, parseRequestIds(data));
+    kickJobs();
+    return views;
+  });
 }
 
 function parseRequestIds(data: unknown): string[] {
   const payload = asObject(data, "Invalid status payload");
   const requestIds = payload.requestIds;
-  if (!Array.isArray(requestIds) || requestIds.length === 0) {
+  if (!Array.isArray(requestIds) || requestIds.length === 0 || requestIds.length > 64) {
     throw new Error("Invalid request ids");
   }
   return requestIds.map((requestId) => {
-    if (typeof requestId !== "string" || !requestId) throw new Error("Invalid request id");
+    if (typeof requestId !== "string" || !requestId || requestId.length > 200) {
+      throw new Error("Invalid request id");
+    }
     return requestId;
   });
 }

@@ -1,140 +1,67 @@
-import { toAuthorizationHeader } from "./credentials";
+import { kieSurface } from "./catalog";
+import type { KieRequest } from "./catalog/types";
+import { KieError, createKieClient, type KieRecord } from "./kie/client";
 
-const MODEL_ID = /^[a-z0-9][a-z0-9._/-]*$/i;
+export { KieError as PlatformError };
 
-export class PlatformError extends Error {
-  readonly status: number;
-  readonly body: unknown;
-
-  constructor(status: number, body: unknown) {
-    super(messageFromBody(status, body));
-    this.name = "PlatformError";
-    this.status = status;
-    this.body = body;
-  }
-}
-
-export type QueuedGeneration = {
-  status: string;
-  requestId: string;
-  statusUrl: string;
-  cancelUrl: string;
-};
-
+/** KIE's five states folded into the three the grid draws, and the result
+    urls sorted into the kind the model produces. */
 export type GenerationStatus = {
-  status: string;
+  status: "running" | "completed" | "failed";
   requestId: string;
   images?: Array<{ url: string }>;
   video?: { url: string };
-  error?: unknown;
+  error?: string;
+  creditsConsumed?: number;
 };
-
-/** One request's answer inside a batched status poll. A request that errors
-    carries its reason alone, so it cannot lose the answers standing beside it. */
-export type StatusResult =
-  | { requestId: string; status: GenerationStatus }
-  | { requestId: string; error: string };
 
 export type PlatformClientOptions = {
   apiKey: string;
-  baseUrl: string;
+  baseUrl?: string;
+  uploadBaseUrl?: string;
   fetch?: typeof fetch;
 };
 
-export function isModelId(model: string): boolean {
-  return MODEL_ID.test(model) && !model.includes("..");
-}
-
+/** A thin, session-free client: the probe script and the key check use it;
+    the studio's runs go through src/server/runs.ts. */
 export function createPlatformClient(options: PlatformClientOptions) {
-  const baseUrl = options.baseUrl.replace(/\/$/, "");
-  const fetchImpl = options.fetch ?? fetch;
-  const auth = toAuthorizationHeader(options.apiKey);
-
-  async function send(method: "GET" | "POST", path: string, body?: Record<string, unknown>) {
-    const url = `${baseUrl}${path}`;
-    console.info("[platform] request", { method, url, body: body ?? null });
-    const response = await fetchImpl(url, {
-      method,
-      headers: {
-        Authorization: auth,
-        ...(body ? { "Content-Type": "application/json" } : {}),
-      },
-      ...(body ? { body: JSON.stringify(body) } : {}),
-    });
-
-    const payload = await readJson(response);
-    console.info("[platform] response", { method, url, status: response.status, body: payload });
-    if (!response.ok) throw new PlatformError(response.status, payload);
-    return payload;
-  }
-
+  const kie = createKieClient(options);
   return {
-    async submit(model: string, input: Record<string, unknown>): Promise<QueuedGeneration> {
-      if (!isModelId(model)) throw new PlatformError(400, { detail: "Invalid model" });
-      return mapQueued(await send("POST", `/${model}`, input));
+    async submit(request: KieRequest): Promise<{ requestId: string }> {
+      const { taskId } = await kie.createTask(request);
+      return { requestId: taskId };
     },
     async status(requestId: string): Promise<GenerationStatus> {
-      if (!requestId) throw new PlatformError(400, { detail: "Missing request id" });
-      return mapStatus(await send("GET", `/requests/${encodeURIComponent(requestId)}/status`));
+      if (!requestId) throw new KieError(400, 400, "Missing task id");
+      return toStatus(await kie.recordInfo(requestId));
     },
+    credits: kie.credits,
+    uploadStream: kie.uploadStream,
   };
 }
 
-function mapQueued(payload: unknown): QueuedGeneration {
-  const data = asRecord(payload);
-  const requestId = stringField(data, "request_id");
-  if (!requestId) throw new PlatformError(502, { detail: "Platform response missing request_id" });
-  return {
-    status: stringField(data, "status") ?? "queued",
-    requestId,
-    statusUrl: stringField(data, "status_url") ?? "",
-    cancelUrl: stringField(data, "cancel_url") ?? "",
-  };
-}
+const VIDEO_EXT = /\.(mp4|mov|webm|m4v)(\?|#|$)/i;
 
-function mapStatus(payload: unknown): GenerationStatus {
-  const data = asRecord(payload);
-  const requestId = stringField(data, "request_id") ?? "";
-  const images = Array.isArray(data.images)
-    ? data.images.flatMap((item) => {
-        const url = asRecord(item).url;
-        return typeof url === "string" ? [{ url }] : [];
-      })
-    : undefined;
-  const videoUrl = asRecord(data.video).url;
-
-  return {
-    status: stringField(data, "status") ?? "unknown",
-    requestId,
-    ...(images?.length ? { images } : {}),
-    ...(typeof videoUrl === "string" ? { video: { url: videoUrl } } : {}),
-    ...(data.error !== undefined ? { error: data.error } : {}),
-  };
-}
-
-function asRecord(value: unknown): Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : {};
-}
-
-function stringField(value: Record<string, unknown>, key: string): string | undefined {
-  const field = value[key];
-  return typeof field === "string" ? field : undefined;
-}
-
-async function readJson(response: Response): Promise<unknown> {
-  const text = await response.text();
-  if (!text) return null;
-  try {
-    return JSON.parse(text) as unknown;
-  } catch {
-    return text;
+export function toStatus(record: KieRecord): GenerationStatus {
+  const base = { requestId: record.taskId };
+  if (record.state === "fail") {
+    const why = record.failMsg || "the platform reported a failure";
+    return {
+      ...base,
+      status: "failed",
+      error: record.failCode && !why.includes(record.failCode) ? `${why} (${record.failCode})` : why,
+    };
   }
-}
-
-function messageFromBody(status: number, body: unknown): string {
-  const detail = asRecord(body).detail;
-  if (typeof detail === "string" && detail) return detail;
-  return `Platform request failed (${status})`;
+  if (record.state !== "success") return { ...base, status: "running" };
+  const urls = record.resultUrls;
+  if (urls.length === 0) {
+    return { ...base, status: "failed", error: "the platform finished without a result" };
+  }
+  const surface = kieSurface(record.model) ?? (VIDEO_EXT.test(urls[0]!) ? "video" : "image");
+  return {
+    ...base,
+    status: "completed",
+    ...(surface === "video" ? { video: { url: urls[0]! } } : { images: urls.map((url) => ({ url })) }),
+    ...(record.creditsConsumed !== undefined ? { creditsConsumed: record.creditsConsumed } : {}),
+  };
 }

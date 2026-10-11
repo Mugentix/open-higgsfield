@@ -1,31 +1,28 @@
 import type { ModelEntry } from "./types";
+import { LONG_VIDEO_DEADLINE_MS, VIDEO_ASPECT, VIDEO_DEADLINE_MS } from "./tokens";
+import { asString } from "../to-kie/values";
 
-const klingTurboSettings = {
-  aspectRatio: { type: "enum", values: ["16:9", "9:16", "1:1"], default: "16:9" },
-  resolution: { type: "enum", values: ["720p", "1080p"], default: "720p" },
-  duration: { type: "range", min: 3, max: 15, default: 5 },
-} as const satisfies ModelEntry["settings"];
+/* One KIE model for all three tiers, hand-mapped in to-kie/kling.ts: the tier
+   is the route's `mode` constant, frames travel as a positional image_urls
+   array, and every submit is single-shot, so KIE's multi_prompt and element
+   fields never reach the wire. The model has no cfg_scale. */
+const KIE_MODEL = "kling-3.0/video";
 
 const kling3Settings = {
-  aspectRatio: { type: "enum", values: ["16:9", "9:16", "1:1"], default: "16:9" },
+  aspectRatio: { type: "enum", values: VIDEO_ASPECT, default: "16:9" },
   duration: { type: "range", min: 3, max: 15, default: 5 },
   sound: { type: "boolean", default: true },
-  cfgScale: { type: "range", min: 0, max: 1, default: 0.5, step: 0.01 },
-  multiShots: { type: "boolean", default: false },
 } as const satisfies ModelEntry["settings"];
 
-const klingMotionSettings = {
-  keepOriginalSound: { type: "boolean", default: true },
-  characterOrientation: { type: "enum", values: ["video", "image"], default: "video" },
-} as const satisfies ModelEntry["settings"];
-
-export const kling3Turbo: ModelEntry = {
-  id: "kling-3-turbo",
-  surface: "video",
-  label: "Kling 3.0 Turbo",
-  roles: { start: 1 },
-  settings: klingTurboSettings,
-};
+function kling3Kie(mode: "std" | "pro" | "4K", deadlineMs: number): ModelEntry["kie"] {
+  return {
+    models: { text: KIE_MODEL, image: KIE_MODEL, firstLast: KIE_MODEL },
+    values: { duration: asString },
+    omit: { image: ["aspectRatio"], firstLast: ["aspectRatio"] },
+    constants: { all: { mode, multi_shots: false } },
+    deadlineMs,
+  };
+}
 
 export const kling3Std: ModelEntry = {
   id: "kling-3-std",
@@ -33,6 +30,7 @@ export const kling3Std: ModelEntry = {
   label: "Kling 3.0 Standard",
   roles: { start: 1, end: 1 },
   settings: kling3Settings,
+  kie: kling3Kie("std", VIDEO_DEADLINE_MS),
 };
 
 export const kling3Pro: ModelEntry = {
@@ -41,6 +39,7 @@ export const kling3Pro: ModelEntry = {
   label: "Kling 3.0 Pro",
   roles: { start: 1, end: 1 },
   settings: kling3Settings,
+  kie: kling3Kie("pro", VIDEO_DEADLINE_MS),
 };
 
 export const kling34k: ModelEntry = {
@@ -49,20 +48,5 @@ export const kling34k: ModelEntry = {
   label: "Kling 3.0 4K",
   roles: { start: 1, end: 1 },
   settings: kling3Settings,
-};
-
-export const kling3MotionStd: ModelEntry = {
-  id: "kling-3-motion-std",
-  surface: "video",
-  label: "Kling 3.0 Motion Control",
-  roles: { start: 1, video: 1 },
-  settings: klingMotionSettings,
-};
-
-export const kling3MotionPro: ModelEntry = {
-  id: "kling-3-motion-pro",
-  surface: "video",
-  label: "Kling 3.0 Motion Control Pro",
-  roles: { start: 1, video: 1 },
-  settings: klingMotionSettings,
+  kie: kling3Kie("4K", LONG_VIDEO_DEADLINE_MS),
 };

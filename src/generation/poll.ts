@@ -1,8 +1,11 @@
 import { getGenerationStatuses } from "./actions";
-import type { GenerationStatus, StatusResult } from "./platform";
+import { unwrap } from "@/server/result";
+import type { RunView } from "./views";
 
-/** Statuses the platform never moves off again. */
-const TERMINAL = new Set(["completed", "failed", "nsfw", "canceled"]);
+type GenerationStatus = RunView;
+
+/** Statuses a run never moves off again. */
+const TERMINAL = new Set(["completed", "failed"]);
 
 export const POLL_INTERVAL_MS = 4000;
 export const POLL_DEADLINE_MS = 10 * 60_000;
@@ -71,7 +74,7 @@ async function round(): Promise<void> {
   timer = null;
   polling = true;
   try {
-    const results = await getGenerationStatuses({ requestIds: [...waiting.keys()] });
+    const results = unwrap(await getGenerationStatuses({ requestIds: [...waiting.keys()] }));
     misses = 0;
     for (const result of results) deliver(result);
     sweep();
@@ -84,17 +87,12 @@ async function round(): Promise<void> {
   }
 }
 
-function deliver(result: StatusResult): void {
-  const waiter = waiting.get(result.requestId);
+function deliver(view: RunView): void {
+  const waiter = waiting.get(view.requestId);
   if (!waiter) return;
-  if ("error" in result) {
-    waiting.delete(result.requestId);
-    waiter.reject(new Error(result.error));
-    return;
-  }
-  if (!TERMINAL.has(result.status.status)) return;
-  waiting.delete(result.requestId);
-  waiter.resolve(result.status);
+  if (!TERMINAL.has(view.status)) return;
+  waiting.delete(view.requestId);
+  waiter.resolve(view);
 }
 
 /* A run the platform never finishes would otherwise hold its skeleton open for

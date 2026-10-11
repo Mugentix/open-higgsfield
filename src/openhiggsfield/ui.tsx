@@ -76,11 +76,15 @@ export function OptionList({
   value,
   onChange,
   ratio,
+  aside,
 }: {
   options: readonly { value: string; label: string }[];
   value: string;
   onChange: (next: string) => void;
   ratio?: boolean;
+  /** A second control beside each line, outside the line's own button — a
+      button cannot nest one — so the list can carry a mark per value. */
+  aside?: (value: string) => ReactNode;
 }) {
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -98,16 +102,25 @@ export function OptionList({
 
   return (
     <div className="ohf-opts ohf-scroll" role="group" ref={listRef}>
-      {options.map((option) => (
-        <Option
-          key={option.value}
-          value={option.value}
-          label={option.label}
-          active={option.value === value}
-          ratio={ratio}
-          onSelect={() => onChange(option.value)}
-        />
-      ))}
+      {options.map((option) => {
+        const line = (
+          <Option
+            key={option.value}
+            value={option.value}
+            label={option.label}
+            active={option.value === value}
+            ratio={ratio}
+            onSelect={() => onChange(option.value)}
+          />
+        );
+        if (!aside) return line;
+        return (
+          <div className="ohf-opt-row" key={option.value}>
+            {line}
+            {aside(option.value)}
+          </div>
+        );
+      })}
     </div>
   );
 }

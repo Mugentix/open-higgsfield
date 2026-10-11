@@ -16,9 +16,10 @@
   --tx: #edefef;
   --tx2: #a8aeaf;
   --tx3: #878e90;
-  /* tx4 carries small metadata type, so it holds the 4.5:1 body floor on --rail;
+  /* tx4 carries small metadata type — counts, times, hints — so it holds the
+     4.5:1 body floor on every ground it sits on, the panels' --s2 included;
      --tx-off is the dimmer value reserved for disabled controls. */
-  --tx4: #7d8486;
+  --tx4: #818889;
   --tx-off: #5c6365;
   --accent: #d1fe17;
   --accent-strong: #ddfe51;
@@ -26,6 +27,9 @@
   --accent-08: rgba(209, 254, 23, 0.08);
   --accent-14: rgba(209, 254, 23, 0.14);
   --accent-32: rgba(209, 254, 23, 0.32);
+  /* The keyboard's ring. 32% reads at 2.5:1 on the ground, under the 3:1 a
+     focus indicator needs; 60% clears it on every surface, --s3 included. */
+  --accent-60: rgba(209, 254, 23, 0.6);
   /* Smoked plate for chrome that sits on a returned picture. 0.7 holds the
      4.5:1 ink floor even against a blown-out white frame; lighter did not. */
   --plate: rgba(6, 9, 8, 0.7);
@@ -104,8 +108,12 @@
   font-family: inherit;
   color: inherit;
 }
+/* One ring for every control the keyboard reaches. A rule below that removes
+   it does so only where a surface of its own draws the ring instead — the
+   card around its open button, the composer around its prompt, a field's
+   own border. */
 .ohf :focus-visible {
-  outline: 2px solid var(--accent-32);
+  outline: 2px solid var(--accent-60);
   outline-offset: 2px;
   border-radius: 6px;
 }
@@ -350,7 +358,7 @@
 /* ---------- top bar ---------- */
 
 /* Two floating instruments on one baseline, held off every edge the way the
-   composer is: the scope pill and the platform lamp side by side, centred as a
+   composer is: the scope pill and the filter bar side by side, centred as a
    pair over the work. Nothing spans the width — the runs are the ground. */
 .ohf-topbar {
   position: absolute;
@@ -462,58 +470,15 @@
 
 /* ---------- platform lamp ---------- */
 
-/* Its own pill, but the control inside it is drawn as a scope tab is — same
-   height, plate and type, so the two instruments read as one set. */
-.ohf-key {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 36px;
-  padding: 0 13px;
-  border-radius: 10px;
-  white-space: nowrap;
-  font-size: 12.5px;
-  font-weight: 550;
-  letter-spacing: -0.005em;
-  color: var(--tx2);
-  transition:
-    color 0.22s ease,
-    background 0.15s ease;
-}
-.ohf-key:hover {
-  color: var(--tx);
-  background: rgba(255, 255, 255, 0.035);
-}
-.ohf-key:active {
-  transform: scale(0.97);
-}
-.ohf-key svg {
-  flex-shrink: 0;
-  color: var(--tx3);
-  transition: color 0.22s ease;
-}
-.ohf-key:hover svg {
-  color: var(--tx2);
-}
-.ohf-key[data-ready="true"] svg,
-.ohf-key[data-busy="true"] svg {
-  color: var(--accent);
-}
-.ohf-key[data-busy="true"] {
-  color: var(--tx);
-}
-/* Idle is a steady lamp; the pulse is reserved for a job actually running. */
+/* Idle is a steady lamp; the pulse is reserved for a job actually running.
+   It rides the gear in the sidebar's head, where the sidebar block places
+   and lights it. */
 .ohf-lamp {
   width: 6px;
   height: 6px;
   border-radius: 50%;
   background: var(--tx4);
   transition: background 0.25s ease;
-}
-.ohf-key[data-busy="true"] .ohf-lamp {
-  background: var(--accent);
-  animation: ohf-pulse 2.4s ease-in-out infinite;
 }
 
 /* ---------- main ---------- */
@@ -592,7 +557,7 @@
 }
 .ohf-tile:has(.ohf-tile-open:focus-visible) {
   border-color: var(--line-2);
-  box-shadow: var(--shadow-2), 0 0 0 2px var(--accent-32);
+  box-shadow: var(--shadow-2), 0 0 0 2px var(--accent-60);
 }
 .ohf-tile-media {
   position: absolute;
@@ -1420,6 +1385,10 @@
 .ohf-composer:has(.ohf-prompt:focus) {
   border-color: var(--accent-32);
   box-shadow: var(--shadow-2), var(--glint), 0 0 0 3px var(--accent-08);
+}
+/* Reached by Tab, the same surface lights at the ring's own strength. */
+.ohf-composer:has(.ohf-prompt:focus-visible) {
+  border-color: var(--accent-60);
 }
 
 /* ---------- the dock's second instrument ---------- */
@@ -2408,9 +2377,11 @@
   border-color: var(--accent-32);
   box-shadow: 0 0 0 3px var(--accent-08);
 }
-/* The field paints its own ring; the global one would stack a second. */
+/* The field paints its own ring; the global one would stack a second. Reached
+   by Tab, the border takes the ring's strength. */
 .ohf-input:focus-visible {
   outline: none;
+  border-color: var(--accent-60);
 }
 
 .ohf-icon-btn {
@@ -2482,6 +2453,10 @@
 }
 .ohf-picker-input:focus-visible {
   outline: none;
+}
+/* The field is a bare line in its head; the head's rule lights for it. */
+.ohf-picker-head:has(.ohf-picker-input:focus-visible) {
+  border-bottom-color: var(--accent-60);
 }
 .ohf-picker-close {
   flex-shrink: 0;
@@ -3545,16 +3520,6 @@ a.ohf-btn-solid {
   }
 }
 
-/* The lamp keeps its light but drops its label before the pair can crowd. */
-@media (max-width: 760px) {
-  .ohf-key-text {
-    display: none;
-  }
-  .ohf-key {
-    gap: 7px;
-    padding: 0 11px;
-  }
-}
 @media (max-width: 640px) {
   /* Narrow enough that a panel spans the column — the anchor stops mattering. */
   .ohf-popover {
@@ -3604,26 +3569,14 @@ a.ohf-btn-solid {
     height: 42px;
     border-radius: 14px;
   }
-  /* Where only one of the two can fit, the labels stay: three drawn frames
-     read alike at a glance, three words do not. */
+  /* Where only one of the two can fit, the labels stay: two drawn frames
+     read alike at a glance, two words do not. */
   .ohf-tab svg {
     display: none;
   }
-  .ohf-tab,
-  .ohf-key {
+  .ohf-tab {
     height: 32px;
     padding: 0 11px;
-  }
-  /* Favorites is the exception: it is the longest word and the only mark with
-     no sibling to be confused with, so here it trades the word for the heart. */
-  .ohf-tab[data-view="favorites"] svg {
-    display: block;
-  }
-  .ohf-tab[data-view="favorites"] .ohf-tab-label {
-    display: none;
-  }
-  .ohf-tab[data-view="favorites"] {
-    padding: 0 10px;
   }
   /* Phone composer: the rail keeps every control and wraps, and the primary
      action takes the full width of its own line rather than shrinking to a
@@ -3731,6 +3684,3660 @@ a.ohf-btn-solid {
      motion, goes on reporting that the run is alive. */
   .ohf-skeleton::before,
   .ohf-generate-sheen {
+    display: none;
+  }
+}
+
+/* ---------- the gate and the team ---------- */
+
+/* Pages outside the studio — sign-in, an invitation, the first team — are one
+   panel on the same ground. */
+.ohf-gate {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+}
+.ohf-gate-panel {
+  width: 400px;
+}
+.ohf-gate .ohf-keys-copy strong {
+  color: var(--tx);
+  font-weight: 560;
+}
+.ohf-link {
+  color: var(--tx);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.ohf-team-panel {
+  width: 480px;
+}
+.ohf-team-body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 16px 18px 18px;
+  max-height: calc(100dvh - 120px);
+  overflow-y: auto;
+}
+.ohf-team-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ohf-team-row-actions,
+.ohf-team-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ohf-team-inline .ohf-input {
+  flex: 1;
+}
+.ohf-team-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--s1);
+}
+.ohf-team-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 8px 12px;
+  min-height: 44px;
+}
+.ohf-team-row + .ohf-team-row {
+  border-top: 1px solid var(--line);
+}
+.ohf-team-row--pending .ohf-team-name {
+  color: var(--tx2);
+}
+.ohf-team-who {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.ohf-team-name {
+  font-size: 12.5px;
+  font-weight: 550;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ohf-team-mail {
+  font-size: 11.5px;
+  color: var(--tx3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ohf-team-role,
+.ohf-team-role-text {
+  font-size: 11.5px;
+  color: var(--tx2);
+}
+.ohf-team-role {
+  background: var(--s2);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 5px 8px;
+  color: var(--tx);
+}
+.ohf-team-foot {
+  justify-content: flex-start;
+  padding-top: 0;
+}
+.ohf-field-value[data-on="true"] {
+  color: var(--tx);
+}
+
+/* ---------- the filter bar ---------- */
+
+/* Lives in the topbar beside the surfaces: what you are looking for, who
+   made it. Popovers open downward here. */
+.ohf-filters {
+  gap: 6px;
+  max-width: min(640px, 60vw);
+}
+.ohf-switch {
+  position: relative;
+  min-width: 0;
+}
+.ohf-popover--down {
+  top: calc(100% + 8px);
+  bottom: auto;
+  transform-origin: top left;
+}
+.ohf-filter-pop {
+  width: 280px;
+  max-height: min(60vh, 480px);
+}
+.ohf-switch-new {
+  color: var(--tx3);
+}
+.ohf-filter-head {
+  padding: 8px 9px 4px;
+}
+.ohf-search {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 38px;
+  min-width: 0;
+  flex: 1;
+  padding: 0 4px 0 12px;
+  border-radius: var(--ctl-r);
+  border: 1px solid var(--line-2);
+  color: var(--tx3);
+  transition: border-color 0.15s ease;
+}
+.ohf-search:focus-within {
+  border-color: var(--accent-32);
+  color: var(--tx2);
+}
+.ohf-search:has(:focus-visible) {
+  border-color: var(--accent-60);
+}
+.ohf-search-input {
+  flex: 1;
+  min-width: 90px;
+  background: none;
+  border: 0;
+  outline: none;
+  font-size: 12.5px;
+  color: var(--tx);
+}
+.ohf-search-input::placeholder {
+  color: var(--tx4);
+}
+.ohf-search .ohf-icon-btn {
+  width: 28px;
+  height: 28px;
+}
+
+/* ---------- use as input ---------- */
+
+/* A card's Use menu opens over the card, above the action rail, and keeps the
+   rail and caption up while it stands. */
+.ohf-tile-menu {
+  background: var(--s2);
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  box-shadow: var(--shadow-3), var(--glint);
+  position: absolute;
+  top: 46px;
+  left: 9px;
+  right: 9px;
+  bottom: auto;
+  z-index: 6;
+  max-height: calc(100% - 54px);
+  overflow-y: auto;
+  padding: 5px;
+}
+.ohf-tile-menu .ohf-menu-row {
+  height: 30px;
+}
+.ohf-tile[data-menu] .ohf-tile-acts,
+.ohf-tile[data-menu] .ohf-tile-caption {
+  opacity: 1;
+}
+.ohf-viewer-use {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.ohf-viewer-use-hint {
+  font-size: 11px;
+  color: var(--tx3);
+}
+/* A grid cell of its own: the tile inside stretches to the column the way
+   it did as a direct child, and the pin sits on top of it. */
+.ohf-asset-wrap {
+  position: relative;
+  display: grid;
+  min-width: 0;
+}
+.ohf-asset-wrap > .ohf-asset {
+  width: 100%;
+}
+.ohf-asset-pin {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 2;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  background: var(--s3);
+  border: 1px solid var(--line);
+  color: var(--tx3);
+  opacity: 0;
+  transition:
+    opacity 0.15s ease,
+    color 0.15s ease;
+}
+.ohf-asset-wrap:hover .ohf-asset-pin,
+.ohf-asset-pin:focus-visible,
+.ohf-asset-pin[data-on="true"] {
+  opacity: 1;
+}
+.ohf-asset-pin[data-on="true"] {
+  color: var(--accent);
+  border-color: var(--accent-32);
+}
+
+/* Compare */
+
+/* Two to four runs read against each other. Their media stand as the heads of
+   one table and every dial the studio knows about is a row beneath them, so a
+   setting is judged by reading across a line rather than between panels. The
+   panel keeps the dialog chrome — unlike the viewer it is a working surface
+   with a header and a table, not a picture that wants the whole screen. */
+.ohf-compare-panel {
+  --label-w: 118px;
+  /* The tallest a figure may stand; a portrait clip gives up width for it. */
+  --cap: min(44dvh, 420px);
+  width: min(1320px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+}
+.ohf-compare-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 14px 13px 18px;
+  border-bottom: 1px solid var(--line);
+}
+.ohf-compare-title {
+  min-width: 0;
+}
+.ohf-compare-heading {
+  font-size: 15px;
+  font-weight: 620;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+}
+.ohf-compare-sub {
+  margin-top: 3px;
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--tx4);
+}
+.ohf-compare-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+/* Wide enough for either word, so the close does not step sideways when the
+   label swaps between Play and Pause. */
+.ohf-btn-solid.ohf-compare-play {
+  height: 30px;
+  min-width: 84px;
+  justify-content: center;
+}
+.ohf-compare-close {
+  width: 30px;
+  height: 30px;
+}
+.ohf-compare-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 16px 18px 20px;
+}
+.ohf-compare-table {
+  width: 100%;
+  /* Under this the columns would crush the pictures; the body scrolls
+     sideways instead and the label column keeps its width. */
+  min-width: calc(var(--label-w) + var(--n, 2) * 200px);
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.ohf-compare-col-label {
+  width: var(--label-w);
+}
+/* The column the arrows are on, tinted down its whole length so the head's
+   focus ring and the cells beneath it read as one thing. */
+.ohf-compare-table col[data-on] {
+  background: var(--s1);
+}
+.ohf-compare-table th,
+.ohf-compare-table td {
+  text-align: left;
+  font-weight: inherit;
+  vertical-align: top;
+}
+/* Figures of different shapes stand on one floor, so the model lines beneath
+   them sit level and the table starts on the same line under every column. */
+.ohf-compare-col {
+  vertical-align: bottom;
+  padding: 4px 8px 12px;
+}
+/* The global ring is drawn tight and at the figure's radius: the cell has no
+   border of its own for the offset ring to sit outside. */
+.ohf-compare-col:focus-visible {
+  outline-offset: -2px;
+  border-radius: 10px;
+}
+.ohf-compare-figure {
+  position: relative;
+  /* Height first: the ratio states the width the picture needs to stand at
+     the cap, and 100% takes it back when that is wider than the column. Sizing
+     the box rather than clamping its height keeps the ratio exact. */
+  width: min(100%, calc(var(--cap) * var(--a, 1.5)));
+  margin: 0 auto;
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--s1);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+  isolation: isolate;
+  animation: ohf-pop 0.34s var(--ease-slide) both;
+}
+.ohf-compare-art {
+  position: absolute;
+  inset: 0;
+}
+.ohf-compare-figure[data-shaped] .ohf-compare-art {
+  display: none;
+}
+.ohf-compare-media {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  animation: ohf-fade 0.3s ease;
+}
+.ohf-compare-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 11px;
+}
+.ohf-compare-name {
+  min-width: 0;
+}
+.ohf-compare-model {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 620;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ohf-compare-when {
+  margin-top: 2px;
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--tx4);
+}
+.ohf-compare-acts {
+  display: flex;
+  gap: 6px;
+  flex: none;
+}
+.ohf-compare-act {
+  width: 30px;
+  height: 30px;
+}
+/* The kept state, drawn as the viewer and the cards draw it. */
+.ohf-compare-keep[data-on="true"] {
+  background: var(--accent-08);
+  border-color: var(--accent-32);
+  color: var(--accent);
+}
+.ohf-compare-keep[data-on="true"]:hover {
+  background: var(--accent-14);
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+.ohf-compare-table tbody th,
+.ohf-compare-table tbody td {
+  padding: 9px 8px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.ohf-compare-table tbody th {
+  position: relative;
+  padding-left: 14px;
+  color: var(--tx3);
+  font-weight: 500;
+  white-space: nowrap;
+}
+/* Every label reserves the slot so the rows share one rail; only a row whose
+   values differ lights it — the one mark in this block the accent is for. */
+.ohf-compare-table tbody th::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 15px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: transparent;
+}
+.ohf-compare-diff th::before {
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-14);
+}
+/* Rows that agree are the ground; rows that differ are what the comparison
+   is for, so only they carry the full ink. */
+.ohf-compare-table tbody td {
+  color: var(--tx3);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.ohf-compare-diff td {
+  color: var(--tx);
+}
+.ohf-compare-prompt {
+  white-space: pre-wrap;
+  user-select: text;
+}
+@media (max-width: 640px) {
+  .ohf-compare-panel {
+    --label-w: 88px;
+    --cap: 36dvh;
+  }
+  .ohf-compare-body {
+    padding: 12px 12px 16px;
+  }
+  /* The key hints describe a keyboard; on a phone the line is only noise. */
+  .ohf-compare-sub {
+    display: none;
+  }
+}
+
+/* Spend */
+/* Measurement, not emphasis: tabular numerals, quiet bars, no accent — the
+   period control borrows the asset shelf's tabs and sits on its own plate. */
+.ohf-spend-periods {
+  align-self: flex-start;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--s1);
+}
+.ohf-spend-periods .ohf-assets-tab {
+  height: 26px;
+  padding: 0 10px;
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+}
+.ohf-spend-total {
+  margin: 0;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--tx2);
+}
+.ohf-spend-total strong {
+  font-weight: 620;
+  color: var(--tx);
+}
+/* One bar per day, height proportional to the day's credits; a day with
+   nothing settled is a gap, so a quiet week reads as one. */
+.ohf-spend-strip {
+  display: flex;
+  align-items: flex-end;
+  gap: 1px;
+  height: 40px;
+  padding: 0 1px;
+  border-bottom: 1px solid var(--line-2);
+}
+.ohf-spend-bar {
+  flex: 1;
+  min-width: 0;
+  border-radius: 2px 2px 0 0;
+  background: var(--s4);
+  transition: background 0.15s ease;
+}
+.ohf-spend-bar[data-spent="true"] {
+  min-height: 2px;
+}
+.ohf-spend-bar:hover {
+  background: var(--tx3);
+}
+.ohf-spend-axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: -4px;
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--tx4);
+}
+.ohf-spend-tables {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  align-items: start;
+}
+.ohf-spend-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+}
+.ohf-spend-col--runs {
+  width: 22%;
+}
+.ohf-spend-col--credits {
+  width: 32%;
+}
+.ohf-spend-table th,
+.ohf-spend-table td {
+  padding: 5px 0;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-bottom: 1px solid var(--line);
+}
+.ohf-spend-table th:first-child,
+.ohf-spend-table td:first-child {
+  text-align: left;
+}
+.ohf-spend-table thead th {
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--tx4);
+}
+.ohf-spend-table tbody th {
+  font-weight: 500;
+  color: var(--tx);
+}
+.ohf-spend-table td {
+  color: var(--tx2);
+}
+
+/* Utilities */
+
+/* A promptless model leaves the words' slot standing — same height, same
+   rail, so the dock does not jump when the picker lands on an upscaler — and
+   says what it is waiting for in the placeholder's own voice. */
+.ohf-prompt--hint {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  color: var(--tx3);
+  cursor: default;
+  user-select: none;
+}
+
+/* Formats */
+
+/* The ratio list grows a second column. The line itself is still the radio
+   that picks the primary; the mark beside every other ratio adds it to the
+   press, so one Generate leaves as a feed post, a story and a banner. The
+   panel widens for the column, and the accent appears only where a mark is on. */
+.ohf-popover--formats {
+  width: min(244px, 100%);
+}
+.ohf-opt-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.ohf-opt-row > .ohf-opt {
+  flex: 1;
+  min-width: 0;
+}
+.ohf-format-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  color: var(--tx3);
+  transition:
+    background 0.13s ease,
+    color 0.13s ease;
+}
+.ohf-format-mark:hover {
+  background: var(--s3);
+  color: var(--tx);
+}
+.ohf-format-mark:focus-visible {
+  outline-offset: -2px;
+}
+/* The primary's line has no mark to tick, but keeps the column so the labels
+   above and below it stay on one rail. */
+.ohf-format-mark--slot {
+  visibility: hidden;
+}
+.ohf-format-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border: 1.3px solid currentColor;
+  border-radius: 4px;
+  opacity: 0.55;
+  transition:
+    opacity 0.13s ease,
+    background 0.13s ease;
+}
+.ohf-format-mark:hover .ohf-format-box {
+  opacity: 1;
+}
+.ohf-format-mark[aria-checked="true"] {
+  color: var(--accent);
+}
+.ohf-format-mark[aria-checked="true"] .ohf-format-box {
+  opacity: 1;
+  background: var(--accent-14);
+}
+/* The count of what one press will now render, and the way back to one. */
+.ohf-format-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 8px 9px 0;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--tx4);
+}
+.ohf-format-clear {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--tx3);
+  transition: color 0.13s ease;
+}
+.ohf-format-clear:hover {
+  color: var(--tx);
+}
+
+/* Asset keys */
+
+/* The digit that attaches a shelf tile from anywhere: Alt+1 … Alt+9, counted
+   the way the shelf is drawn. A key hint on a plate, like the badge in the
+   opposite corner — a label of what the keyboard does, never a state, so it
+   takes no accent. */
+.ohf-asset-key {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 5px;
+  background: var(--plate);
+  color: var(--plate-ink);
+  font-family: inherit;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+/* Sidebar */
+
+/* The studio gains a left column: the team and the way into its settings,
+   the products with their projects — where the next run lands — the scopes
+   that span both surfaces, and what the team has spent. The shell becomes a
+   two-column grid, so the wall and the composer keep flowing from the main
+   column and nothing ever sits under the sidebar. Folded, the column is a
+   56px rail of the same marks: the DOM does not change, the labels step
+   aside, and the width is the one thing that moves. */
+.ohf-shell {
+  --ohf-side-w: 248px;
+  display: grid;
+  grid-template-columns: var(--ohf-side-w) minmax(0, 1fr);
+  /* The one row is the viewport, never the wall's content height: each
+     column scrolls inside itself. */
+  grid-template-rows: minmax(0, 1fr);
+  transition: grid-template-columns 0.3s var(--ease-slide);
+}
+.ohf-shell[data-sidebar="rail"] {
+  --ohf-side-w: 56px;
+}
+/* Each column is named to its cell: on a phone the open sidebar leaves the
+   flow to float over the wall, and the main column must not slide into the
+   cell it vacated. */
+.ohf-sidebar {
+  position: relative;
+  grid-column: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--rail);
+  border-right: 1px solid var(--line);
+}
+.ohf-shell > .ohf-main {
+  grid-column: 2;
+}
+
+/* The head sits on the topbar's baseline: 12px down, 46px of bar. */
+.ohf-side-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  min-height: 58px;
+  padding: 12px 10px 4px;
+}
+.ohf-side-toggle,
+.ohf-side-gear,
+.ohf-side-mono {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  color: var(--tx3);
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+.ohf-side-toggle:hover,
+.ohf-side-gear:hover,
+.ohf-side-mono:hover {
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--tx);
+}
+.ohf-side-toggle:active,
+.ohf-side-gear:active,
+.ohf-side-mono:active {
+  transform: scale(0.96);
+}
+.ohf-side-team {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-left: 2px;
+}
+.ohf-side-team-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--tx);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ohf-side-team-me {
+  font-size: 11px;
+  color: var(--tx3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* The lamp rides the gear's corner, ringed in the column's own ground so it
+   never fuses with a tooth. Steady once a key is held, pulsing while a run
+   is in flight: liveness, the one accent that moves in the column. */
+.ohf-side-gear .ohf-lamp {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  box-shadow: 0 0 0 2px var(--rail);
+}
+.ohf-side-gear[data-ready="true"] .ohf-lamp {
+  background: var(--accent);
+}
+.ohf-side-gear[data-busy="true"] .ohf-lamp {
+  background: var(--accent);
+  animation: ohf-pulse 2.4s ease-in-out infinite;
+}
+
+.ohf-side-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 2px 10px 12px;
+}
+.ohf-side-head {
+  flex-shrink: 0;
+  padding: 16px 8px 6px;
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--tx3);
+}
+.ohf-side-head:first-child {
+  padding-top: 8px;
+}
+.ohf-side-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.ohf-side-group + .ohf-side-group {
+  margin-top: 8px;
+}
+.ohf-side-product {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding-left: 8px;
+}
+.ohf-side-product-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 550;
+  color: var(--tx2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Open, the name speaks for the product; the monogram is the rail's. */
+.ohf-side-mono {
+  display: none;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  background: var(--s1);
+  border: 1px solid var(--line);
+  color: var(--tx2);
+}
+/* The row's own controls — a new project, the "…" menu — are offered on
+   hover and to the keyboard, the way the card's action rail is. */
+.ohf-side-add,
+.ohf-side-more {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.ohf-side-product:hover .ohf-side-add,
+.ohf-side-add:focus-visible,
+.ohf-side-row:hover .ohf-side-more,
+.ohf-side-more:focus-visible,
+.ohf-side-more[aria-expanded="true"] {
+  opacity: 1;
+}
+.ohf-side-row {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.ohf-side-item {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: 32px;
+  padding: 0 8px 0 12px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+  color: var(--tx2);
+  transition:
+    background 0.13s ease,
+    color 0.13s ease;
+}
+/* flex: 1 fills a row's width; a lone item under the column must not grow
+   down the same way, or the library links spread across the whole height. */
+.ohf-side-body > .ohf-side-item {
+  flex: 0 0 auto;
+}
+.ohf-side-item:hover {
+  background: var(--s1);
+  color: var(--tx);
+}
+.ohf-side-item svg {
+  flex-shrink: 0;
+  color: var(--tx3);
+  transition: color 0.2s ease;
+}
+.ohf-side-item:hover svg {
+  color: var(--tx2);
+}
+.ohf-side-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* The project the next run lands in, and the scope on screen: state, drawn
+   as the accent hairline on the row's edge — never a filled plate. */
+.ohf-side-item[aria-current="true"],
+.ohf-side-item[aria-pressed="true"] {
+  color: var(--tx);
+}
+.ohf-side-item[aria-current="true"]::before,
+.ohf-side-item[aria-pressed="true"]::before,
+.ohf-side-group[data-active="true"] .ohf-side-mono::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+.ohf-side-item[aria-pressed="true"] svg {
+  color: var(--accent);
+}
+/* The row's menu opens in the flow beneath it: the column scrolls, and a
+   popover would be clipped at its edge. */
+.ohf-side-menu {
+  flex-basis: 100%;
+  margin: 2px 0 4px 12px;
+  padding: 4px;
+  background: var(--s2);
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  box-shadow: var(--shadow-1), var(--glint);
+  animation: ohf-pop 0.18s var(--ease);
+}
+.ohf-side-menu .ohf-menu-row {
+  height: 30px;
+}
+.ohf-side-form {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  gap: 6px;
+  padding: 2px 0 4px 8px;
+}
+.ohf-side-form .ohf-keys-save {
+  flex-shrink: 0;
+  height: 32px;
+  padding: 0 11px;
+}
+.ohf-side-new {
+  margin-top: 4px;
+  color: var(--tx3);
+}
+.ohf-side-new:hover {
+  color: var(--tx);
+}
+.ohf-side-alert {
+  margin-top: 6px;
+}
+.ohf-side-foot {
+  flex-shrink: 0;
+  padding: 10px 18px 14px;
+  border-top: 1px solid var(--line);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--tx3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The rail: the same marks, stacked, with every label and every row that
+   needs a width gone. The product holding the current project carries the
+   hairline, since its projects are not drawn; the hairline itself moves to
+   the column's edge, where the row's would have been. */
+.ohf-shell[data-sidebar="rail"] .ohf-side-label,
+.ohf-shell[data-sidebar="rail"] .ohf-side-add,
+.ohf-shell[data-sidebar="rail"] .ohf-side-row,
+.ohf-shell[data-sidebar="rail"] .ohf-side-form,
+.ohf-shell[data-sidebar="rail"] .ohf-side-new,
+.ohf-shell[data-sidebar="rail"] .ohf-side-alert {
+  display: none;
+}
+.ohf-shell[data-sidebar="rail"] .ohf-side-mono {
+  display: flex;
+}
+.ohf-shell[data-sidebar="rail"] .ohf-side-top {
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 10px 6px;
+}
+.ohf-shell[data-sidebar="rail"] .ohf-side-body {
+  gap: 4px;
+  padding: 4px 10px 12px;
+}
+.ohf-shell[data-sidebar="rail"] .ohf-side-group + .ohf-side-group {
+  margin-top: 4px;
+}
+.ohf-shell[data-sidebar="rail"] .ohf-side-product {
+  min-height: 0;
+  padding: 0;
+}
+.ohf-shell[data-sidebar="rail"] .ohf-side-group[data-active="true"] .ohf-side-mono {
+  color: var(--tx);
+  border-color: var(--line-2);
+}
+.ohf-shell[data-sidebar="rail"] .ohf-side-item {
+  flex: none;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 10px;
+}
+.ohf-shell[data-sidebar="rail"] .ohf-side-item::before,
+.ohf-shell[data-sidebar="rail"] .ohf-side-mono::before {
+  left: -10px;
+  top: 10px;
+  bottom: 10px;
+}
+
+/* Nothing here reveals the row's controls, so they simply stand. */
+@media (hover: none) {
+  .ohf-side-add,
+  .ohf-side-more {
+    opacity: 1;
+  }
+}
+/* On a phone the open column would leave the wall a sliver, so it floats
+   over the work instead and the grid keeps only the rail's width. */
+@media (max-width: 640px) {
+  .ohf-shell {
+    --ohf-side-w: 56px;
+  }
+  .ohf-shell[data-sidebar="open"] .ohf-sidebar {
+    position: absolute;
+    z-index: 40;
+    inset: 0 auto 0 0;
+    width: 248px;
+    box-shadow: var(--shadow-3);
+  }
+}
+
+/* Batch upload */
+
+/* Files can be dropped rather than dialogued in: onto the composer, where they
+   go up for the first slot with room, or onto the picker, where they join the
+   slot it is editing. The ring is the one dashed edge the surface allows — a
+   slot waiting to be filled — drawn in the accent because a drop in progress
+   is state, not decoration. The composer keeps its own radius; the panel its
+   own. */
+.ohf-drop--over {
+  outline: 1.5px dashed var(--accent);
+  outline-offset: -1.5px;
+  background: var(--accent-08);
+}
+.ohf-composer.ohf-drop--over {
+  border-color: var(--accent-32);
+  box-shadow: var(--shadow-2), var(--glint), 0 0 0 3px var(--accent-08);
+}
+/* Children stop hearing the pointer while files are over the zone, so the
+   drop lands on the zone rather than on a tile, a chip or the textarea. */
+.ohf-drop--over > * {
+  pointer-events: none;
+}
+/* What a batch set aside — the wrong kind for the slot, or more than a single
+   slot takes — in one quiet line above the footer. Measurement, never accent. */
+.ohf-assets-note {
+  padding: 8px 15px;
+  border-top: 1px solid var(--line);
+  font-size: 11.5px;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+  color: var(--tx3);
+}
+/* A slot the plane blocks stays on the row, dimmed, and keeps its reason as
+   the tip; it is not a state of its own, only a control that cannot be taken. */
+.ohf-chip--role:disabled {
+  color: var(--tx-off);
+  border-color: var(--line);
+  background: transparent;
+  transform: none;
+}
+.ohf-chip--role:disabled .ohf-chip-count {
+  color: var(--tx-off);
+}
+/* The attach tip may carry a whole sentence — what to remove before this slot
+   opens — so it wraps rather than hanging past the composer. */
+.ohf-attach[data-tip]::after {
+  white-space: normal;
+  width: max-content;
+  max-width: min(360px, 80vw);
+}
+
+/* Numbered inputs */
+
+/* A list role's items go to KIE in the order the strip shows them, and the
+   prompt addresses them by that position — Image 1, Video 1, Audio 1 — so the
+   tag carries the number the model will see. Tabular, on the slate tag, no
+   accent: a position is a fact, not a state. */
+.ohf-strip-num {
+  margin-left: 3px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  font-weight: 600;
+}
+/* The position can be changed here. Two chevrons on the tile's sides, in the
+   remove control's idiom, hidden until the tile is hovered or one of them holds
+   focus, so a strip at rest is still a contact sheet. */
+.ohf-strip-move {
+  position: absolute;
+  top: 50%;
+  width: 20px;
+  height: 20px;
+  margin-top: -10px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--tx2);
+  background: var(--s4);
+  box-shadow:
+    0 1px 4px rgba(0, 0, 0, 0.55),
+    inset 0 0 0 1px var(--line-2);
+  opacity: 0;
+  transition:
+    opacity 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s var(--ease);
+}
+.ohf-strip-move--earlier {
+  left: -7px;
+}
+.ohf-strip-move--later {
+  right: -7px;
+}
+.ohf-strip-move--earlier svg {
+  rotate: 90deg;
+}
+.ohf-strip-move--later svg {
+  rotate: -90deg;
+}
+.ohf-strip-item:hover .ohf-strip-move,
+.ohf-strip-item:focus-within .ohf-strip-move {
+  opacity: 1;
+}
+.ohf-strip-move:hover:not(:disabled) {
+  background: var(--s3);
+  color: var(--tx);
+}
+.ohf-strip-move:active:not(:disabled) {
+  transform: scale(0.94);
+}
+.ohf-strip-move:disabled {
+  opacity: 0;
+  pointer-events: none;
+}
+/* Or dragged: the moving tile lifts a little and fades, and every tile it
+   could land on in its own role shows the ring. */
+.ohf-strip-item[draggable="true"] .ohf-strip-tile {
+  cursor: grab;
+}
+.ohf-strip-item[data-dragging] .ohf-strip-tile {
+  opacity: 0.4;
+  cursor: grabbing;
+}
+.ohf-strip-item[data-over] .ohf-strip-tile {
+  box-shadow:
+    inset 0 0 0 1.5px var(--accent),
+    var(--shadow-1);
+}
+/* Held past the model's cap: assemblePlane sends a role's items only up to it,
+   so the tile stands back, tagged OVER, with no number to claim a place. */
+.ohf-strip-item[data-unsent] .ohf-strip-tile {
+  opacity: 0.45;
+}
+/* The line under the strip once a numbered input is attached: how to point the
+   prompt at what the numerals show. Quiet, once, in the strip's own inset. */
+.ohf-strip-hint {
+  padding: 8px 14px 0;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--tx3);
+}
+/* In the picker the pick's mark is its number where the slot is a list — the
+   check says "in the set", the numeral says which one it becomes. Same accent
+   disc, widened for two digits. */
+.ohf-asset-mark--num {
+  min-width: 19px;
+  width: auto;
+  padding: 0 5px;
+  border-radius: 10px;
+  font-size: 10.5px;
+  font-weight: 650;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A plane that cannot be sent says so under its inputs, in the alert colour. */
+.ohf-strip-hint--warn {
+  color: var(--danger);
+}
+
+/* Navigation */
+
+/* A team with hundreds of projects: the column gains a filter that narrows
+   both levels as it is typed, product groups that fold shut and stay shut,
+   a Recent section for the set being worked today, and one keyboard surface
+   over the whole tree — the arrows walk it, Left and Right fold and open,
+   Enter opens. Cmd/Ctrl+K reaches the same rows from anywhere, and "?" lists
+   every key the studio answers to. */
+
+/* The filter sits under the Products head, in the column's own ground rather
+   than on a plate: it is part of the list, not a control over it. */
+.ohf-side-filter {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+  height: 30px;
+  margin: 0 0 6px;
+  padding: 0 4px 0 10px;
+  border-radius: 8px;
+  background: var(--s1);
+  border: 1px solid var(--line);
+  color: var(--tx3);
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+.ohf-side-filter:focus-within {
+  border-color: var(--accent-32);
+  color: var(--tx2);
+}
+.ohf-side-filter:has(:focus-visible) {
+  border-color: var(--accent-60);
+}
+.ohf-side-filter-input {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: 0;
+  outline: none;
+  font-size: 12px;
+  color: var(--tx);
+}
+.ohf-side-filter-input::placeholder {
+  color: var(--tx4);
+}
+.ohf-side-filter .ohf-icon-btn--ghost {
+  width: 22px;
+  height: 22px;
+  color: var(--tx3);
+}
+.ohf-side-empty {
+  padding: 8px 12px 4px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--tx3);
+  text-wrap: pretty;
+}
+
+/* One tree, one tab stop. The rows are the focus targets — a row's own "+"
+   and "…" lend on it — so the ring is the row's. */
+.ohf-side-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.ohf-side-tree .ohf-side-group + .ohf-side-group {
+  margin-top: 6px;
+}
+.ohf-side-projects {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.ohf-side-product[role="treeitem"],
+.ohf-side-row[role="treeitem"] {
+  cursor: pointer;
+  border-radius: 8px;
+}
+.ohf-side-product[role="treeitem"] {
+  padding-left: 4px;
+  transition: background 0.13s ease;
+}
+.ohf-side-product[role="treeitem"]:hover {
+  background: rgba(255, 255, 255, 0.025);
+}
+.ohf-side-product:hover .ohf-side-product-name {
+  color: var(--tx);
+}
+/* Shut, the chevron points at the name; open, it points down at the rows.
+   One path, a quarter turn — and the row's aria-expanded is what turns it. */
+.ohf-side-chevron {
+  display: flex;
+  flex-shrink: 0;
+  width: 14px;
+  justify-content: center;
+  color: var(--tx4);
+  transform: rotate(90deg);
+  transition:
+    transform 0.18s var(--ease-slide),
+    color 0.13s ease;
+}
+.ohf-side-product[aria-expanded="false"] .ohf-side-chevron {
+  transform: none;
+}
+.ohf-side-product:hover .ohf-side-chevron {
+  color: var(--tx2);
+}
+/* While a filter holds every group open there is nothing to fold, and the
+   chevron says so by standing down. */
+.ohf-side-tree[data-filtering] .ohf-side-chevron {
+  opacity: 0.4;
+}
+/* How many projects the group holds: measurement, in tabular figures, and
+   quiet enough that the name stays the thing read. */
+.ohf-side-count {
+  flex-shrink: 0;
+  padding-right: 4px;
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--tx4);
+}
+.ohf-side-product:hover .ohf-side-count {
+  color: var(--tx3);
+}
+/* The row's controls come out for the keyboard too: reaching the row is
+   what reveals them, the way hovering it does. */
+.ohf-side-product:focus-within .ohf-side-add,
+.ohf-side-row:focus-within .ohf-side-more {
+  opacity: 1;
+}
+/* The current project is the tree's selected row: the same accent hairline
+   the item drew when it was a button, read off the row now. */
+.ohf-side-row[aria-selected="true"] .ohf-side-item {
+  color: var(--tx);
+}
+.ohf-side-row[aria-selected="true"] .ohf-side-item::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+/* Recent: the projects opened lately, product named on the right in the
+   count's own type, so two "Retargeting" rows read apart. */
+.ohf-side-recent {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.ohf-side-recent .ohf-side-item {
+  flex: 0 0 auto;
+  gap: 8px;
+}
+.ohf-side-sub {
+  flex: 0 1 auto;
+  max-width: 45%;
+  margin-left: auto;
+  font-size: 10.5px;
+  font-weight: 450;
+  color: var(--tx4);
+}
+.ohf-side-item:hover .ohf-side-sub {
+  color: var(--tx3);
+}
+
+/* The rail has no width for any of this: the products stand as monograms,
+   and the row itself is what opens the column. */
+.ohf-shell[data-sidebar="rail"] .ohf-side-filter,
+.ohf-shell[data-sidebar="rail"] .ohf-side-recent,
+.ohf-shell[data-sidebar="rail"] .ohf-side-chevron,
+.ohf-shell[data-sidebar="rail"] .ohf-side-count,
+.ohf-shell[data-sidebar="rail"] .ohf-side-empty,
+.ohf-shell[data-sidebar="rail"] .ohf-side-projects {
+  display: none;
+}
+.ohf-shell[data-sidebar="rail"] .ohf-side-product[role="treeitem"] {
+  padding: 0;
+  border-radius: 10px;
+}
+.ohf-shell[data-sidebar="rail"] .ohf-side-product[role="treeitem"]:hover {
+  background: none;
+}
+
+/* The command palette: a modal that sits high on the screen the way a
+   launcher does, the field as its header, one list under it. Rows are
+   options read through the field, so the field keeps focus and the active
+   row is drawn, never focused. */
+.ohf dialog.ohf-palette {
+  margin-top: max(12dvh, 24px);
+  margin-bottom: auto;
+}
+.ohf-palette-panel {
+  width: min(600px, calc(100vw - 32px));
+  max-height: min(68dvh, 560px);
+}
+.ohf-palette-head {
+  padding: 12px 14px 12px 16px;
+}
+.ohf-palette-list {
+  padding: 6px;
+}
+.ohf-palette-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.ohf-palette-section + .ohf-palette-section {
+  margin-top: 4px;
+}
+.ohf-palette-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 38px;
+  padding: 5px 10px 5px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  color: var(--tx2);
+  transition:
+    background 0.1s ease,
+    color 0.1s ease;
+}
+/* The active row is the one Enter will take. A plate, not the accent: the
+   accent on a row here would say "current", which is a different fact. */
+.ohf-palette-row[aria-selected="true"] {
+  background: var(--s3);
+  color: var(--tx);
+}
+.ohf-palette-ic {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: var(--s1);
+  border: 1px solid var(--line);
+  color: var(--tx3);
+  transition: color 0.1s ease;
+}
+.ohf-palette-row[aria-selected="true"] .ohf-palette-ic {
+  color: var(--tx);
+}
+.ohf-palette-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.ohf-palette-parent {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--tx3);
+}
+.ohf-palette-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 13px;
+  font-weight: 500;
+}
+.ohf-palette-kind {
+  flex-shrink: 0;
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--tx4);
+}
+/* The one in force — the project the runs land in, the model in the
+   composer, the scope on screen — is state, so it takes the accent word. */
+.ohf-palette-now {
+  flex-shrink: 0;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.ohf-palette-keys {
+  display: flex;
+  gap: 3px;
+  flex-shrink: 0;
+}
+.ohf-palette-foot {
+  display: flex;
+  gap: 14px;
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border-top: 1px solid var(--line);
+  font-size: 11px;
+  color: var(--tx4);
+}
+.ohf-palette-foot span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+/* The composer's key cap is drawn for lime; here the caps sit on the panel
+   and read as keys in their own right. */
+.ohf-palette .ohf-kbd,
+.ohf-shortcuts .ohf-kbd {
+  height: 20px;
+  min-width: 20px;
+  justify-content: center;
+  padding: 0 5px;
+  opacity: 1;
+  color: var(--tx2);
+  background: var(--s3);
+  border: 1px solid var(--line-2);
+  box-shadow: var(--glint);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.ohf-palette-esc {
+  flex-shrink: 0;
+}
+
+/* The shortcuts sheet: four groups in two columns, every row a sentence and
+   its keys, drawn from the one registry the handlers read. */
+.ohf-shortcuts-panel {
+  width: min(680px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+}
+.ohf-shortcuts-panel .ohf-keys-copy {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
+}
+.ohf-shortcuts-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px 28px;
+  overflow-y: auto;
+  padding: 16px 18px 18px;
+}
+.ohf-shortcuts-head {
+  padding: 0 2px 4px;
+}
+.ohf-shortcuts-list {
+  display: flex;
+  flex-direction: column;
+}
+.ohf-shortcuts-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 34px;
+  padding: 4px 2px;
+  border-top: 1px solid var(--line);
+}
+.ohf-shortcuts-row:first-child {
+  border-top: 0;
+}
+.ohf-shortcuts-does {
+  min-width: 0;
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: var(--tx2);
+  text-wrap: pretty;
+}
+.ohf-shortcuts-keys {
+  display: flex;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .ohf dialog.ohf-palette {
+    margin-top: 8px;
+  }
+  .ohf-palette-panel {
+    max-height: calc(100dvh - 16px);
+  }
+  .ohf-palette-foot,
+  .ohf-palette-kind {
+    display: none;
+  }
+  .ohf-shortcuts-body {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+}
+
+/* Templates */
+
+/* The team's prompt library opens off the control at the prompt's end, in the
+   model picker's frame: search leads, the rows scroll under it, the save row
+   holds the foot. The same fixed height as the picker, for the same reason —
+   a panel that grows while it is typed into cannot be typed into. */
+.ohf-popover--templates {
+  width: min(480px, 100%);
+  height: min(60vh, 520px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.ohf-tpl-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+/* A group's head carries its count, and the starter pack's the one press that
+   copies it into the library. */
+.ohf-tpl-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 10px 5px;
+}
+.ohf-tpl-group-action {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--tx2);
+  background: var(--s1);
+  border: 1px solid var(--line);
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
+}
+.ohf-tpl-group-action:hover:not(:disabled) {
+  background: var(--s3);
+  color: var(--tx);
+}
+.ohf-tpl-group-action:disabled {
+  color: var(--tx-off);
+}
+/* A row is one press — the whole plate — with the trash standing on its right
+   edge outside the press, since a button cannot hold one. */
+.ohf-tpl-row {
+  position: relative;
+}
+.ohf-tpl-main {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+  padding: 8px 40px 8px 10px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  text-align: left;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease;
+}
+.ohf-tpl-main:hover,
+.ohf-tpl-main:focus-visible {
+  background: var(--s3);
+}
+/* A template for the other surface is still words, so it stays on the list —
+   only quieter, below the ones that fit. */
+.ohf-tpl-row[data-fit="false"] .ohf-tpl-title,
+.ohf-tpl-row[data-fit="false"] .ohf-tpl-preview {
+  color: var(--tx3);
+}
+.ohf-tpl-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tx);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ohf-tpl-preview {
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--tx3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ohf-tpl-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  margin-top: 1px;
+}
+/* Surface and tags are facts, not states: hairline chips in the quiet tones,
+   the surface set in caps so it reads as a category and the tags as words. */
+.ohf-tpl-surface,
+.ohf-tpl-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  font-size: 10.5px;
+  line-height: 1;
+  color: var(--tx3);
+}
+.ohf-tpl-surface {
+  background: var(--s1);
+  color: var(--tx2);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.ohf-tpl-uses {
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--tx4);
+}
+/* Offered on hover and on focus within the row; once armed it stays and says
+   what the second press does, in the studio's danger tint. */
+.ohf-tpl-del {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  height: 26px;
+  min-width: 26px;
+  padding: 0 6px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--tx3);
+  opacity: 0;
+  transition:
+    opacity 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease;
+}
+.ohf-tpl-row:hover .ohf-tpl-del,
+.ohf-tpl-row:focus-within .ohf-tpl-del,
+.ohf-tpl-del[data-armed="true"] {
+  opacity: 1;
+}
+.ohf-tpl-del:hover,
+.ohf-tpl-del:focus-visible {
+  background: var(--s4);
+  color: var(--tx);
+}
+.ohf-tpl-del[data-armed="true"] {
+  color: var(--danger);
+  background: var(--danger-bg);
+}
+.ohf-tpl-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--line);
+}
+.ohf-tpl-hint {
+  font-size: 11px;
+  color: var(--tx3);
+}
+/* The button is disabled with nothing to save, so the tip rides its wrapper. */
+.ohf-tpl-save-slot .ohf-btn-solid:disabled {
+  color: var(--tx-off);
+  box-shadow: none;
+}
+.ohf-tpl-status {
+  padding: 8px 16px 0;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--tx2);
+}
+.ohf-tpl-status--error {
+  color: var(--danger);
+}
+/* The two forms stand where the list stood, at the panel's full height: the
+   head keeps the picker's rail, the fields scroll, the foot holds the press. */
+.ohf-tpl-form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.ohf-tpl-form-head {
+  justify-content: space-between;
+}
+.ohf-tpl-form-title {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ohf-tpl-form-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px 16px;
+}
+.ohf-tpl-form-copy {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--tx3);
+  overflow-wrap: anywhere;
+}
+.ohf-tpl-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.ohf-tpl-form-row {
+  display: flex;
+  gap: 8px;
+}
+.ohf-tpl-form-row > * {
+  flex: 1;
+  min-width: 0;
+}
+/* The input's own plate, on a select. */
+.ohf-tpl-select {
+  width: 100%;
+  height: 34px;
+  padding: 0 9px;
+  background: var(--s1);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 12.5px;
+  color: var(--tx);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.ohf-tpl-select:hover {
+  border-color: var(--line-2);
+}
+.ohf-tpl-select:focus {
+  outline: none;
+  border-color: var(--accent-32);
+  box-shadow: 0 0 0 3px var(--accent-08);
+}
+.ohf-tpl-select:focus-visible {
+  border-color: var(--accent-60);
+}
+
+/* Product dialog */
+
+/* The product's brief, behind Edit product in the sidebar's menu: the three
+   facts a template leans on. The team dialog's panel, with three fields. */
+.ohf-product-panel {
+  width: 440px;
+}
+.ohf-product-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+/* A textarea on the input's plate: brand notes run to a paragraph. */
+.ohf-input--area {
+  resize: vertical;
+  min-height: 96px;
+  line-height: 1.5;
+}
+
+/* Verdicts */
+
+/* The team's call, as one word. Winner takes the accent because it is state
+   — the creative the money follows; testing is the quiet grey of a fact still
+   open; killed is struck through, the word itself saying so. Set at the
+   badge's size in caps, so it reads as a mark and not as a caption. */
+.ohf-verdict {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+.ohf-verdict[data-verdict="winner"] {
+  color: var(--accent);
+}
+.ohf-verdict[data-verdict="testing"] {
+  color: var(--tx2);
+}
+.ohf-verdict[data-verdict="killed"] {
+  color: var(--tx3);
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+}
+
+/* On the card it sits bottom-left on the smoked plate the badge and the rail
+   wear, and stays through a hover: the caption lifts above it instead, since
+   the call is the one fact a hover must not hide. Painted after the caption,
+   so its plate reads over the scrim and under the transparent open plate. */
+.ohf-tile-verdict {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  pointer-events: none;
+  padding: 4px 8px;
+  border-radius: 7px;
+  background: var(--plate);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+}
+.ohf-tile[data-verdict] .ohf-tile-caption {
+  padding-bottom: 40px;
+}
+
+/* In the Use menu the call sits under the uses, off a hairline: judging a run
+   is a different act from feeding it back in. The word that holds is checked,
+   and checked is state, so it carries the accent; killed keeps its strike. */
+.ohf-menu-verdicts {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--line);
+}
+.ohf-menu-row[aria-checked="true"],
+.ohf-menu-row[aria-checked="true"] .ohf-menu-count {
+  color: var(--accent);
+}
+.ohf-menu-row[aria-checked="true"]:hover:not(:disabled) {
+  color: var(--accent-strong);
+}
+.ohf-menu-row[data-verdict="killed"][aria-checked="true"] .ohf-menu-label {
+  text-decoration: line-through;
+}
+
+/* The viewer's three words as toggle buttons, the held one lit in the word's
+   own terms: winner in the accent set the keep uses; testing and killed on a
+   raised hairline over the sunk plate, so a held grey is never mistaken for
+   a hover. Clear stays quiet until reached for. */
+.ohf-viewer-verdicts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ohf-viewer-verdict[data-on="true"][data-verdict="winner"] {
+  background: var(--accent-08);
+  border-color: var(--accent-32);
+  color: var(--accent);
+}
+.ohf-viewer-verdict[data-on="true"][data-verdict="winner"]:hover {
+  background: var(--accent-14);
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+.ohf-viewer-verdict[data-on="true"][data-verdict="testing"],
+.ohf-viewer-verdict[data-on="true"][data-verdict="killed"] {
+  background: var(--s1);
+  border-color: var(--tx3);
+}
+.ohf-viewer-verdict[data-on="true"][data-verdict="killed"] {
+  color: var(--tx2);
+  text-decoration: line-through;
+}
+.ohf-viewer-verdict--clear {
+  color: var(--tx3);
+}
+.ohf-viewer-verdict--clear:hover {
+  color: var(--tx);
+}
+/* The words behind the call, on the input's plate; the count appears only as
+   the cap comes into sight. */
+.ohf-viewer-note {
+  min-height: 72px;
+  font-size: 12.5px;
+}
+.ohf-viewer-note-count {
+  align-self: flex-end;
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--tx4);
+}
+
+/* Compare's column head carries the word on the time line, in the line's own
+   flow; the row below says it again where every dial is read across. */
+.ohf-compare-when .ohf-verdict {
+  display: inline;
+}
+
+/* The bar's two calls are words, not glyphs, so they take the wide button's
+   room on both sides. A set all killed holds the way the word does — struck,
+   grey — never in the accent, which on this bar would say "winner". */
+.ohf-selact--word {
+  padding: 0 12px;
+}
+.ohf-selact--kill[data-on="true"] {
+  background: rgba(255, 255, 255, 0.055);
+  border-color: var(--line-2);
+  color: var(--tx2);
+  text-decoration: line-through;
+}
+.ohf-selact--kill[data-on="true"]:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--line-2);
+  color: var(--tx);
+}
+
+/* Accessibility */
+
+/* The first Tab stop: off screen until it is reached, then a plate at the top
+   left, over everything. Not the accent — a route, not a state — but it takes
+   the ring like every control. */
+.ohf-skip {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 100;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: var(--s3);
+  border: 1px solid var(--line-2);
+  box-shadow: var(--shadow-2), var(--glint);
+  color: var(--tx);
+  font-size: 12.5px;
+  font-weight: 560;
+  text-decoration: none;
+  translate: 0 -200%;
+  opacity: 0;
+}
+.ohf-skip:focus-visible {
+  translate: 0 0;
+  opacity: 1;
+}
+
+/* Menus scroll, so a ring drawn outside a row is clipped at the edge; it is
+   drawn inside the row instead, as the option lists draw theirs. */
+.ohf-menu-row:focus-visible {
+  outline-offset: -2px;
+}
+
+/* A row lit to --s3 takes its small metadata one step up with it — the count,
+   the model's name, the key. tx4 holds the floor on the panels' own ground,
+   not on a row lifted above it. */
+.ohf-menu-row:hover:not(:disabled) .ohf-menu-count,
+.ohf-menu-row:focus-visible .ohf-menu-count,
+.ohf-palette-row[aria-selected="true"] .ohf-palette-kind,
+.ohf-tpl-main:hover .ohf-tpl-uses,
+.ohf-tpl-main:focus-visible .ohf-tpl-uses {
+  color: var(--tx3);
+}
+
+/* Agents */
+
+/* The skill runner: the studio's shell with the wall replaced by a column
+   of runs, a run, or the skills. The header stands in the flow rather than
+   floating — there is no picture under it to float over — and keeps the
+   topbar's baseline. Everything below scrolls inside its own pane. */
+.ohf-agents {
+  overflow: hidden;
+}
+.ohf-agents:focus {
+  outline: none;
+}
+.ohf-agents-top {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  flex-shrink: 0;
+  min-height: 58px;
+  padding: 12px 20px 10px;
+  border-bottom: 1px solid var(--line);
+}
+.ohf-agents-title {
+  font-size: 16px;
+  font-weight: 620;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.ohf-agents-title:focus {
+  outline: none;
+}
+.ohf-agents-tabs {
+  margin-left: 4px;
+}
+.ohf-agents-crumb {
+  color: var(--tx3);
+  font-size: 12.5px;
+  font-weight: 550;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+.ohf-agents-crumb:hover {
+  color: var(--tx);
+}
+.ohf-agents-crumb-sep {
+  color: var(--tx4);
+  font-size: 12.5px;
+}
+.ohf-agents-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 18px 20px 28px;
+}
+.ohf-agents-body > * {
+  max-width: 1100px;
+}
+/* A pane's heading: the same uppercase label the sidebar heads its sections
+   with, since the pane is a section of the page rather than a page. */
+.ohf-agents-h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 14px 16px 8px;
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--tx3);
+}
+.ohf-agents-count {
+  font-size: 10.5px;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+  color: var(--tx4);
+}
+.ohf-agents-filter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ohf-agents-select {
+  width: auto;
+  min-width: 180px;
+  max-width: 320px;
+}
+/* The empty shelf, in the picker's own idiom, with room for one press. */
+.ohf-agents-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 48px 20px 40px;
+  text-align: center;
+}
+.ohf-agents-empty .ohf-picker-empty-hint {
+  max-width: 52ch;
+}
+.ohf-agents-empty .ohf-btn-accent {
+  margin-top: 6px;
+}
+
+/* The sidebar's Agents entry is a link, marked current by its route the way a
+   scope is marked pressed: the same hairline, the same lit mark. */
+a.ohf-side-item {
+  text-decoration: none;
+}
+.ohf-side-item[aria-current="page"] {
+  color: var(--tx);
+}
+.ohf-side-item[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+.ohf-side-item[aria-current="page"] svg {
+  color: var(--accent);
+}
+
+/* Status pill */
+
+/* One word per run. The accent marks liveness alone: the agent at work, or
+   waiting on a person. Queued and stopping are grey facts; the past is grey;
+   failed takes the danger tint every refusal on the surface wears. */
+.ohf-agent-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: 7px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  background: var(--s1);
+  border: 1px solid var(--line);
+  color: var(--tx2);
+}
+.ohf-agent-status[data-live="true"] {
+  background: var(--accent-08);
+  border-color: var(--accent-32);
+  color: var(--accent);
+}
+.ohf-agent-status[data-status="failed"] {
+  background: var(--danger-bg);
+  border-color: var(--danger-line);
+  color: var(--danger);
+}
+.ohf-agent-status[data-status="stopped"],
+.ohf-agent-status[data-status="queued"],
+.ohf-agent-status[data-status="stopping"] {
+  color: var(--tx3);
+}
+.ohf-agent-status-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.ohf-agent-status[data-status="running"] .ohf-agent-status-dot {
+  animation: ohf-pulse 2.4s ease-in-out infinite;
+}
+
+/* Runs list */
+
+.ohf-runs-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.ohf-runs-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.ohf-runs-count {
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--tx3);
+}
+.ohf-runs {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--s1);
+}
+/* A row is a grid, so the columns line up down the list: title and skill,
+   the status, cost, when, who, and the way in. */
+.ohf-run-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 72px 110px minmax(80px, 140px) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 10px 10px 14px;
+  min-height: 56px;
+}
+.ohf-run-row + .ohf-run-row {
+  border-top: 1px solid var(--line);
+}
+.ohf-run-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: inherit;
+  text-decoration: none;
+  border-radius: 8px;
+}
+.ohf-run-title {
+  font-size: 13px;
+  font-weight: 560;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ohf-run-main:hover .ohf-run-title {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.ohf-run-sub,
+.ohf-run-when,
+.ohf-run-who {
+  font-size: 11.5px;
+  color: var(--tx3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ohf-run-cost {
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--tx2);
+  text-align: right;
+}
+.ohf-run-open {
+  justify-self: end;
+  text-decoration: none;
+}
+
+/* Skills */
+
+.ohf-skills-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+/* The one dashed edge the surface allows: a slot waiting to be filled. Quiet
+   until a bundle is over it, when the shared drop ring lights it. */
+.ohf-skill-drop {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  border: 1.5px dashed var(--line-2);
+  border-radius: 14px;
+  background: var(--s1);
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+.ohf-skill-drop.ohf-drop--over {
+  outline: none;
+  border-color: var(--accent);
+}
+.ohf-skill-drop-copy {
+  flex: 1;
+  min-width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.ohf-skill-drop-title {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.ohf-skill-drop-hint {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--tx3);
+  text-wrap: pretty;
+}
+.ohf-skill-progress {
+  flex-basis: 100%;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--s3);
+  overflow: hidden;
+}
+.ohf-skill-progress-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.2s ease;
+}
+.ohf-skill-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+.ohf-skill {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--s1);
+  box-shadow: var(--glint);
+}
+.ohf-skill[data-status="invalid"] {
+  border-color: var(--danger-line);
+}
+.ohf-skill-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+.ohf-skill-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ohf-skill-version {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--tx3);
+}
+.ohf-skill-state {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tx3);
+}
+.ohf-skill-state[data-status="invalid"] {
+  color: var(--danger);
+}
+.ohf-skill-desc {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--tx2);
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+/* Measurement: files, size, what it needs — tabular, quiet. */
+.ohf-skill-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-size: 11.5px;
+}
+.ohf-skill-meta div {
+  display: flex;
+  gap: 5px;
+}
+.ohf-skill-meta dt {
+  color: var(--tx4);
+}
+.ohf-skill-meta dd {
+  color: var(--tx2);
+  font-variant-numeric: tabular-nums;
+}
+.ohf-skill-agents {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--tx2);
+}
+.ohf-skill-problems {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--danger-bg);
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--tx);
+}
+.ohf-skill-problems li::before {
+  content: "— ";
+  color: var(--danger);
+}
+.ohf-skill-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 4px;
+  font-size: 11.5px;
+}
+.ohf-skill-actions .ohf-btn-quiet {
+  color: var(--tx3);
+  height: 28px;
+  padding: 0 8px;
+  margin-left: -8px;
+}
+.ohf-skill-actions .ohf-btn-quiet:hover {
+  color: var(--tx);
+}
+.ohf-skill-delete {
+  color: var(--danger);
+  border-color: var(--danger-line);
+}
+
+/* New run */
+
+.ohf-newrun {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 760px;
+}
+.ohf-newrun-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.ohf-newrun-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+}
+.ohf-newrun-brief {
+  min-height: 160px;
+}
+.ohf-newrun-count {
+  align-self: flex-end;
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--tx4);
+}
+.ohf-newrun-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 4px;
+}
+/* The skill is picked from cards that are one radio group: the chosen one
+   takes the accent frame the picked tile does, with the mark in its corner. */
+.ohf-skill-picks {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+.ohf-skill-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--s1);
+  text-align: left;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+.ohf-skill-pick:hover {
+  background: var(--s2);
+  border-color: var(--line-2);
+}
+.ohf-skill-pick[data-on="true"] {
+  border-color: var(--accent);
+  background: var(--accent-08);
+}
+.ohf-skill-pick-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.ohf-skill-pick-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  align-self: center;
+  border-radius: 50%;
+  border: 1px solid var(--line-2);
+  color: var(--accent-ink);
+}
+.ohf-skill-pick[data-on="true"] .ohf-skill-pick-mark {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.ohf-skill-pick-desc {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--tx2);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Attachments */
+
+/* The library as a list to tick. Behind a disclosure, so a form stays short
+   until files are wanted; the toggle counts what is picked. */
+.ohf-attach-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ohf-attach-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  height: 30px;
+  padding: 0 10px 0 6px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--tx2);
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+.ohf-attach-toggle:hover:not(:disabled) {
+  background: var(--s3);
+  color: var(--tx);
+}
+.ohf-attach-toggle:disabled {
+  color: var(--tx-off);
+}
+.ohf-attach-chevron,
+.ohf-ev-chevron {
+  display: flex;
+  color: var(--tx3);
+  transition: transform 0.18s var(--ease);
+}
+.ohf-attach-toggle[aria-expanded="true"] .ohf-attach-chevron,
+.ohf-ev-fold[aria-expanded="true"] .ohf-ev-chevron {
+  transform: rotate(90deg);
+}
+.ohf-attach-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ohf-attach-filter {
+  max-width: 280px;
+}
+.ohf-attach-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--s1);
+}
+.ohf-attach-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+.ohf-attach-row:hover {
+  background: var(--s2);
+}
+.ohf-attach-list li + li .ohf-attach-row {
+  border-top: 1px solid var(--line);
+}
+.ohf-attach-row input {
+  flex-shrink: 0;
+  width: 15px;
+  height: 15px;
+  margin: 0;
+}
+.ohf-attach-thumb {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--s3);
+  color: var(--tx3);
+}
+.ohf-attach-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.ohf-attach-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ohf-attach-kind {
+  font-size: 11px;
+  color: var(--tx4);
+}
+.ohf-attach-row[data-on="true"] .ohf-attach-name {
+  color: var(--tx);
+}
+.ohf-attach-empty {
+  padding: 8px 2px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--tx3);
+}
+
+/* Run view */
+
+/* The head carries the facts; the two panes below split the width, the
+   stream taking what the artifacts leave. Each scrolls on its own, and the
+   reply box holds the stream's foot. */
+.ohf-run-head {
+  justify-content: space-between;
+}
+.ohf-run-head-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ohf-run-crumbs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.ohf-run-head-sub {
+  font-size: 12px;
+  color: var(--tx3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ohf-run-head-facts {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.ohf-run-figure {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--tx2);
+}
+.ohf-run-stop {
+  height: 30px;
+  color: var(--tx2);
+}
+.ohf-run-stop[data-armed="true"] {
+  border-color: var(--danger-line);
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+.ohf-run-alert {
+  margin: 10px 20px 0;
+}
+.ohf-run-panes {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+}
+.ohf-run-pane {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.ohf-run-pane--artifacts {
+  border-left: 1px solid var(--line);
+  background: var(--rail);
+}
+.ohf-run-artifacts-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 16px 20px;
+}
+.ohf-stream {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 18px 20px 8px;
+}
+.ohf-stream-empty {
+  padding: 8px 0;
+}
+
+/* Stream */
+
+/* Prose stands open at reading width; everything the agent did folds to a
+   line and opens on request. A subagent's detour nests one step in, under
+   a hairline, so where the agent is at any moment can be read off the
+   indent. */
+.ohf-stream-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 820px;
+}
+.ohf-stream-list[data-depth="0"] {
+  padding-bottom: 8px;
+}
+.ohf-stream-item {
+  min-width: 0;
+}
+.ohf-ev-text {
+  padding: 2px 0;
+}
+.ohf-ev-text[data-final="false"] .ohf-md > :last-child::after {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 13px;
+  margin-left: 3px;
+  vertical-align: -2px;
+  border-radius: 1.5px;
+  background: var(--accent);
+  animation: ohf-pulse 1s ease-in-out infinite;
+}
+/* A person's message: on the composer's plate, signed and timed. */
+.ohf-ev-user {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--s2);
+  border: 1px solid var(--line);
+}
+.ohf-ev-user-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.ohf-ev-user-name {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--tx2);
+}
+.ohf-ev-time {
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--tx4);
+  white-space: nowrap;
+}
+.ohf-ev-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ohf-ev-attachment {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 6px;
+  background: var(--s1);
+  border: 1px solid var(--line);
+  font-size: 11px;
+  color: var(--tx2);
+  text-decoration: none;
+}
+.ohf-ev-attachment:hover {
+  color: var(--tx);
+  border-color: var(--line-2);
+}
+/* The one-line events: a status, a turn's bill, a file that landed. */
+.ohf-ev-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 22px;
+  font-size: 11.5px;
+  color: var(--tx3);
+}
+.ohf-ev-line > span:first-child {
+  flex: 1;
+  min-width: 0;
+}
+.ohf-ev-line a {
+  color: var(--tx2);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.ohf-ev-line a:hover {
+  color: var(--tx);
+}
+.ohf-ev-status[data-status="waiting"],
+.ohf-ev-status[data-status="running"] {
+  color: var(--tx2);
+}
+.ohf-ev-status[data-status="failed"] {
+  color: var(--danger);
+}
+.ohf-ev-result {
+  font-variant-numeric: tabular-nums;
+}
+.ohf-ev-dim {
+  font-size: 11.5px;
+  color: var(--tx3);
+}
+.ohf-ev-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 11px;
+  border-radius: 10px;
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-line);
+}
+.ohf-ev-error .ohf-alert-ic {
+  padding-top: 2px;
+}
+.ohf-ev-error-text {
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+/* A folded row: the chevron, the mark, the name and one line of what it
+   did. The whole row is the press; open, the body hangs under it on the
+   row's plate. */
+.ohf-ev-fold {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 30px;
+  padding: 0 8px 0 6px;
+  border-radius: 8px;
+  text-align: left;
+  color: var(--tx2);
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
+}
+.ohf-ev-fold:hover {
+  background: var(--s2);
+  color: var(--tx);
+}
+.ohf-ev-fold-label {
+  font-size: 12px;
+  font-weight: 500;
+}
+.ohf-ev-tool,
+.ohf-ev-think,
+.ohf-ev-group {
+  border-radius: 10px;
+  border: 1px solid transparent;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+.ohf-ev-tool[data-open="true"],
+.ohf-ev-think[data-open="true"],
+.ohf-ev-group[data-open="true"] {
+  border-color: var(--line);
+  background: var(--s1);
+}
+.ohf-ev-tool-ic {
+  display: flex;
+  flex-shrink: 0;
+  color: var(--tx3);
+}
+.ohf-ev-tool[data-failed="true"] .ohf-ev-tool-ic {
+  color: var(--danger);
+}
+.ohf-ev-group[data-working="true"] .ohf-ev-tool-ic {
+  color: var(--accent);
+}
+.ohf-ev-tool-name {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+.ohf-ev-tool-summary {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--tx3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ohf-ev-fold:hover .ohf-ev-tool-summary {
+  color: var(--tx2);
+}
+.ohf-ev-tool-spin {
+  flex-shrink: 0;
+  width: 11px;
+  height: 11px;
+}
+.ohf-ev-tool-failed {
+  flex-shrink: 0;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--danger);
+}
+.ohf-ev-tool-body,
+.ohf-ev-group-body,
+.ohf-ev-think-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 12px 12px 30px;
+}
+.ohf-ev-think-body {
+  font-size: 12.5px;
+  color: var(--tx2);
+}
+.ohf-ev-tool-part {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+.ohf-ev-tool-part[data-error="true"] .ohf-ev-dim {
+  color: var(--danger);
+}
+.ohf-ev-tool-part[data-error="true"] .ohf-code {
+  border-color: var(--danger-line);
+}
+/* A subagent's own stream, one step in, under a hairline. */
+.ohf-ev-group-body > .ohf-stream-list {
+  padding-left: 10px;
+  border-left: 1px solid var(--line-2);
+}
+/* Code — a command, a tool's input, what came back — on the input's plate.
+   One typeface throughout the studio, so code is Inter too, in tabular
+   figures, wrapping rather than scrolling off the page. */
+.ohf-code {
+  max-height: 360px;
+  overflow: auto;
+  padding: 9px 11px;
+  border-radius: 8px;
+  background: var(--s2);
+  border: 1px solid var(--line);
+  font-size: 12px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+  color: var(--tx);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.ohf-ev-tool[data-open="true"] .ohf-code,
+.ohf-ev-group[data-open="true"] .ohf-code {
+  background: var(--bg);
+}
+
+/* Cards */
+
+/* Where the run stopped for a person: a question, or a command that spends
+   money. The card stands raised on the stream and keeps the accent edge only
+   while it is open; settled, it falls back to the ground and shows who. */
+.ohf-ev-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--s2);
+  border: 1px solid var(--accent-32);
+  box-shadow: var(--shadow-1), var(--glint);
+}
+.ohf-ev-card[data-settled="true"] {
+  border-color: var(--line);
+  box-shadow: none;
+}
+.ohf-ev-card-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.ohf-ev-card-kind {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.ohf-ev-card[data-settled="true"] .ohf-ev-card-kind {
+  color: var(--tx3);
+}
+.ohf-ev-card[data-decision="denied"] .ohf-ev-card-kind {
+  color: var(--tx2);
+  text-decoration: line-through;
+}
+.ohf-ev-card-by {
+  font-size: 11.5px;
+  color: var(--tx3);
+}
+.ohf-ev-card-copy {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--tx2);
+}
+.ohf-ev-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 2px;
+}
+.ohf-ev-card-note {
+  font-size: 11.5px;
+  color: var(--tx3);
+}
+.ohf-ev-question {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 0;
+  min-width: 0;
+}
+.ohf-ev-question-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: var(--tx);
+}
+.ohf-ev-question-header {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--tx3);
+}
+.ohf-ev-answer {
+  font-size: 12.5px;
+  color: var(--tx);
+}
+.ohf-ev-options {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+/* One option per line, the mark on its left: a radio or a tick, drawn as
+   the picked tile draws its mark, lit by the pick alone. */
+.ohf-ev-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--s1);
+  text-align: left;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease;
+}
+.ohf-ev-option:hover:not(:disabled) {
+  background: var(--s3);
+  border-color: var(--line-2);
+}
+.ohf-ev-option[data-on="true"] {
+  border-color: var(--accent-32);
+  background: var(--accent-08);
+}
+.ohf-ev-option:disabled {
+  color: var(--tx-off);
+}
+.ohf-ev-option-mark {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  border-radius: 50%;
+  border: 1px solid var(--line-2);
+  color: var(--accent-ink);
+}
+.ohf-ev-option[role="checkbox"] .ohf-ev-option-mark {
+  border-radius: 4px;
+}
+.ohf-ev-option[data-on="true"] .ohf-ev-option-mark {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.ohf-ev-option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.ohf-ev-option-label {
+  font-size: 12.5px;
+  font-weight: 550;
+}
+.ohf-ev-option-desc {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--tx3);
+}
+.ohf-ev-other {
+  margin-top: 2px;
+}
+
+/* Markdown */
+
+/* The agent's prose. Lists get their bullets back — the reset took them —
+   and the headings their weight; code sits on the plate the tool rows use.
+   Everything inherits the stream's 13px measure. */
+.ohf-md {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--tx);
+  overflow-wrap: anywhere;
+}
+.ohf-md > * + * {
+  margin-top: 0.7em;
+}
+.ohf-md h3,
+.ohf-md h4,
+.ohf-md h5,
+.ohf-md h6 {
+  font-weight: 620;
+  letter-spacing: -0.015em;
+  line-height: 1.3;
+  color: var(--tx);
+}
+.ohf-md h3 {
+  font-size: 15px;
+  margin-top: 1.1em;
+}
+.ohf-md h4 {
+  font-size: 13.5px;
+  margin-top: 1em;
+}
+.ohf-md h5,
+.ohf-md h6 {
+  font-size: 13px;
+}
+.ohf-md > :first-child {
+  margin-top: 0;
+}
+.ohf-md ul,
+.ohf-md ol {
+  padding-left: 1.4em;
+}
+.ohf-md ul {
+  list-style: disc;
+}
+.ohf-md ol {
+  list-style: decimal;
+}
+.ohf-md li + li {
+  margin-top: 0.25em;
+}
+.ohf-md li > ul,
+.ohf-md li > ol {
+  margin-top: 0.25em;
+}
+.ohf-md li::marker {
+  color: var(--tx3);
+}
+.ohf-md strong {
+  font-weight: 620;
+}
+.ohf-md a {
+  color: var(--tx);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: var(--tx3);
+}
+.ohf-md a:hover {
+  text-decoration-color: var(--tx);
+}
+.ohf-md code {
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--s3);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.ohf-md pre {
+  max-height: 420px;
+  overflow: auto;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--s2);
+  border: 1px solid var(--line);
+  font-size: 12px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.ohf-md pre code {
+  padding: 0;
+  background: none;
+  font-size: inherit;
+}
+.ohf-md blockquote {
+  padding: 2px 0 2px 12px;
+  border-left: 2px solid var(--line-2);
+  color: var(--tx2);
+}
+.ohf-md hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+.ohf-md table {
+  border-collapse: collapse;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.ohf-md th,
+.ohf-md td {
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+.ohf-md th {
+  font-weight: 600;
+  background: var(--s1);
+  color: var(--tx2);
+}
+.ohf-md [data-align="right"] {
+  text-align: right;
+}
+.ohf-md [data-align="center"] {
+  text-align: center;
+}
+/* A question's words sit inside a legend, so they flow as a line. */
+.ohf-md--inline,
+.ohf-md--inline > p {
+  display: inline;
+}
+
+/* Artifacts */
+
+/* What the run made, as cards: a picture shows itself, a clip plays, a
+   document is a sheet with its type on it that opens in the reader below.
+   The wall mark means the file stands on the team's wall already. */
+.ohf-artifacts {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.ohf-artifacts-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 36px 16px;
+  text-align: center;
+}
+.ohf-artifact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+.ohf-artifact {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 8px;
+  border-radius: 12px;
+  background: var(--s1);
+  border: 1px solid var(--line);
+}
+.ohf-artifact-preview {
+  aspect-ratio: 4 / 3;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--s2);
+}
+.ohf-artifact-preview img,
+.ohf-artifact-preview video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.ohf-artifact-glyph {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--tx3);
+}
+.ohf-artifact-glyph audio {
+  width: 100%;
+  height: 28px;
+}
+.ohf-artifact-open {
+  border-radius: 8px;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
+}
+.ohf-artifact-open:hover {
+  background: var(--s3);
+  color: var(--tx);
+}
+.ohf-artifact-ext {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+.ohf-artifact-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+.ohf-artifact-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 11.5px;
+  font-weight: 550;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ohf-artifact-size {
+  flex-shrink: 0;
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--tx4);
+}
+.ohf-artifact-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.ohf-artifact-actions .ohf-icon-btn--ghost {
+  color: var(--tx3);
+}
+.ohf-artifact-actions .ohf-icon-btn--ghost:hover {
+  color: var(--tx);
+}
+.ohf-artifact-publish {
+  margin-left: auto;
+  height: 28px;
+  padding: 0 8px;
+  font-size: 11.5px;
+  color: var(--tx2);
+}
+.ohf-artifact-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  height: 28px;
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 550;
+  color: var(--tx3);
+}
+.ohf-artifact-badge svg {
+  color: var(--accent);
+}
+/* The reader: one document under the grid, on the dialog panel's ground. */
+.ohf-artifact-doc {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  background: var(--s2);
+  box-shadow: var(--shadow-1), var(--glint);
+  animation: ohf-rise 0.22s var(--ease);
+}
+.ohf-artifact-doc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 8px 8px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.ohf-artifact-doc-name {
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ohf-artifact-doc-body {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 12px 14px 14px;
+}
+.ohf-artifact-doc-body .ohf-code {
+  max-height: none;
+  background: var(--s1);
+}
+
+/* Reply */
+
+/* The stream's foot: the field, the attachments, the hint and the one accent
+   press — the composer's shape, without the dials. Ended, a line stands in
+   its place and says what happened. */
+.ohf-reply {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 10px 20px 16px;
+  border-top: 1px solid var(--line);
+}
+.ohf-reply-field {
+  min-height: 72px;
+  max-height: 40vh;
+  font-size: 13px;
+}
+.ohf-reply-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ohf-reply-row .ohf-attach-field {
+  flex: 1;
+  min-width: 0;
+}
+.ohf-reply-hint {
+  font-size: 11px;
+  color: var(--tx4);
+  white-space: nowrap;
+}
+.ohf-reply-send {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ohf-reply-send:disabled {
+  background: var(--s3);
+  color: var(--tx3);
+  box-shadow: none;
+}
+.ohf-reply-closed {
+  flex-shrink: 0;
+  padding: 14px 20px 18px;
+  border-top: 1px solid var(--line);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--tx3);
+}
+
+/* Narrow */
+
+/* Under a laptop's width the artifacts fall below the stream, each pane
+   keeping a height of its own; the run rows give up who and when, and the
+   new-run pair stacks. */
+@media (max-width: 1000px) {
+  .ohf-run-panes {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+  .ohf-run-pane--artifacts {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+    max-height: 40vh;
+  }
+  .ohf-run-row {
+    grid-template-columns: minmax(0, 1fr) auto 72px auto;
+  }
+  .ohf-run-when,
+  .ohf-run-who {
+    display: none;
+  }
+}
+@media (max-width: 640px) {
+  .ohf-agents-top,
+  .ohf-agents-body {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+  .ohf-newrun-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ohf-run-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .ohf-run-cost,
+  .ohf-run-open {
+    display: none;
+  }
+  .ohf-stream,
+  .ohf-reply {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+  .ohf-reply-hint {
     display: none;
   }
 }
